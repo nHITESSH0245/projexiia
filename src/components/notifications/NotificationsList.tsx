@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Notification } from '@/types';
-import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/supabase';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notification';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 

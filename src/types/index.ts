@@ -10,12 +10,17 @@ export interface User {
   created_at: string;
 }
 
+export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
+export type TaskStatus = 'todo' | 'in_progress' | 'completed';
+export type TaskPriority = 'high' | 'medium' | 'low';
+export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
+
 export interface Project {
   id: string;
   title: string;
   description: string;
   student_id: string;
-  status: 'pending' | 'in_review' | 'changes_requested' | 'approved';
+  status: ProjectStatus;
   created_at: string;
   updated_at: string;
   tasks?: Task[];
@@ -32,8 +37,8 @@ export interface Task {
   title: string;
   description: string;
   due_date: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'todo' | 'in_progress' | 'completed';
+  priority: TaskPriority;
+  status: TaskStatus;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +62,7 @@ export interface Notification {
   title: string;
   message: string;
   is_read: boolean;
-  type: 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
+  type: NotificationType;
   related_id?: string;
   created_at: string;
 }

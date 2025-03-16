@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Task, Feedback, Notification, Analytics } from '@/types';
+import { Project, Task, Feedback, Analytics, ProjectStatus, TaskStatus } from '@/types';
+import { createNotification } from './notification';
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
@@ -210,6 +211,22 @@ export const createTask = async (
       return { task: null, error };
     }
 
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('student_id, title')
+      .eq('id', projectId)
+      .single();
+
+    if (projectData) {
+      await createNotification(
+        projectData.student_id,
+        'New Task Assigned',
+        `A new task "${title}" has been added to your project "${projectData.title}"`,
+        'task_assigned',
+        projectId
+      );
+    }
+
     toast.success('Task created successfully!');
     return { task: data as Task, error: null };
   } catch (error) {
@@ -219,7 +236,7 @@ export const createTask = async (
   }
 };
 
-export const updateTaskStatus = async (taskId: string, status: 'todo' | 'in_progress' | 'completed') => {
+export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   try {
     const { data, error } = await supabase
       .from('tasks')
@@ -242,7 +259,7 @@ export const updateTaskStatus = async (taskId: string, status: 'todo' | 'in_prog
   }
 };
 
-export const updateProjectStatus = async (projectId: string, status: 'pending' | 'in_review' | 'changes_requested' | 'approved') => {
+export const updateProjectStatus = async (projectId: string, status: ProjectStatus) => {
   try {
     const { data, error } = await supabase
       .from('projects')
@@ -254,6 +271,22 @@ export const updateProjectStatus = async (projectId: string, status: 'pending' |
     if (error) {
       toast.error(`Failed to update project: ${error.message}`);
       return { project: null, error };
+    }
+
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('student_id, title')
+      .eq('id', projectId)
+      .single();
+
+    if (projectData) {
+      await createNotification(
+        projectData.student_id,
+        'Project Status Updated',
+        `Your project "${projectData.title}" status has been updated to ${status.replace('_', ' ')}`,
+        'status_change',
+        projectId
+      );
     }
 
     toast.success('Project status updated!');
@@ -293,6 +326,22 @@ export const provideFeedback = async (projectId: string, comment: string, taskId
       return { feedback: null, error };
     }
 
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('student_id, title')
+      .eq('id', projectId)
+      .single();
+
+    if (projectData) {
+      await createNotification(
+        projectData.student_id,
+        'New Feedback Received',
+        `You've received new feedback on your project "${projectData.title}"`,
+        'feedback',
+        projectId
+      );
+    }
+
     toast.success('Feedback submitted successfully!');
     return { feedback: data as Feedback, error: null };
   } catch (error) {
@@ -325,78 +374,6 @@ export const getProjectFeedback = async (projectId: string) => {
   }
 };
 
-// Notification system functions
-export const getNotifications = async () => {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      return { notifications: [], error: new Error('User not authenticated') };
-    }
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Fetch notifications error:', error);
-      return { notifications: [], error };
-    }
-
-    return { notifications: data as Notification[], error: null };
-  } catch (error) {
-    console.error('Fetch notifications error:', error);
-    return { notifications: [], error };
-  }
-};
-
-export const markNotificationAsRead = async (notificationId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Mark notification as read error:', error);
-      return { notification: null, error };
-    }
-
-    return { notification: data as Notification, error: null };
-  } catch (error) {
-    console.error('Mark notification as read error:', error);
-    return { notification: null, error };
-  }
-};
-
-export const markAllNotificationsAsRead = async () => {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      return { error: new Error('User not authenticated') };
-    }
-
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', userData.user.id)
-      .eq('is_read', false);
-
-    if (error) {
-      console.error('Mark all notifications as read error:', error);
-      return { error };
-    }
-
-    return { error: null };
-  } catch (error) {
-    console.error('Mark all notifications as read error:', error);
-    return { error };
-  }
-};
-
 // Analytics functions
 export const getStudentAnalytics = async () => {
   try {
@@ -405,10 +382,9 @@ export const getStudentAnalytics = async () => {
       return { analytics: null, error: new Error('User not authenticated') };
     }
 
-    // Fetch projects data for analytics
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
-      .select('status')
+      .select('id, status')
       .eq('student_id', userData.user.id);
 
     if (projectsError) {
@@ -416,18 +392,19 @@ export const getStudentAnalytics = async () => {
       return { analytics: null, error: projectsError };
     }
 
-    // Fetch tasks data for analytics
-    const { data: tasksData, error: tasksError } = await supabase
-      .from('tasks')
-      .select('status, priority, project_id')
-      .in('project_id', projectsData.map(p => p.id) || []);
+    const projectIds = projectsData.map(p => p.id);
+    const { data: tasksData, error: tasksError } = projectIds.length > 0 
+      ? await supabase
+          .from('tasks')
+          .select('status, priority')
+          .in('project_id', projectIds)
+      : { data: [], error: null };
 
     if (tasksError) {
       console.error('Fetch tasks for analytics error:', tasksError);
       return { analytics: null, error: tasksError };
     }
 
-    // Calculate analytics
     const analytics: Analytics = {
       pendingProjects: projectsData.filter(p => p.status === 'pending').length,
       inReviewProjects: projectsData.filter(p => p.status === 'in_review').length,
@@ -452,7 +429,6 @@ export const getFacultyAnalytics = async () => {
       return { analytics: null, error: new Error('User not authenticated') };
     }
 
-    // Fetch all projects data for faculty analytics
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
       .select('status');
@@ -462,7 +438,6 @@ export const getFacultyAnalytics = async () => {
       return { analytics: null, error: projectsError };
     }
 
-    // Fetch all tasks data for faculty analytics
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
       .select('status, priority');
@@ -472,7 +447,6 @@ export const getFacultyAnalytics = async () => {
       return { analytics: null, error: tasksError };
     }
 
-    // Calculate analytics
     const analytics: Analytics = {
       pendingProjects: projectsData.filter(p => p.status === 'pending').length,
       inReviewProjects: projectsData.filter(p => p.status === 'in_review').length,
@@ -489,4 +463,3 @@ export const getFacultyAnalytics = async () => {
     return { analytics: null, error };
   }
 };
-

@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from 'react';
-import { Chart } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStudentAnalytics, getFacultyAnalytics } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Analytics } from '@/types';
 import { ArrowUpRight, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export const AnalyticsOverview = () => {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -88,6 +89,40 @@ export const AnalyticsOverview = () => {
     { name: 'Other', value: analytics.completedTasks + analytics.pendingTasks - analytics.highPriorityTasks, color: '#9ca3af' },
   ];
 
+  // Custom chart render component
+  const CustomPieChart = ({ data }: { data: Array<{ name: string; value: number; color: string }> }) => {
+    return (
+      <ResponsiveContainer width="100%" height={240}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+            nameKey="name"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip content={({ active, payload }) => {
+            if (active && payload && payload.length) {
+              return (
+                <div className="bg-background border border-border p-2 rounded-md shadow-md">
+                  <p className="font-semibold">{payload[0].name}: {payload[0].value}</p>
+                </div>
+              );
+            }
+            return null;
+          }} />
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -152,7 +187,7 @@ export const AnalyticsOverview = () => {
               {analytics.highPriorityTasks}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {Math.round((analytics.highPriorityTasks / (analytics.completedTasks + analytics.pendingTasks)) * 100)}% of all tasks
+              {Math.round((analytics.highPriorityTasks / (analytics.completedTasks + analytics.pendingTasks || 1)) * 100)}% of all tasks
             </p>
           </CardContent>
         </Card>
@@ -165,13 +200,7 @@ export const AnalyticsOverview = () => {
             <CardDescription>Distribution of projects by status</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            <Chart 
-              type="pie"
-              data={projectStatusData}
-              dataKey="value"
-              nameKey="name"
-              className="h-60 w-full"
-            />
+            <CustomPieChart data={projectStatusData} />
           </CardContent>
         </Card>
         <Card className="col-span-1">
@@ -180,13 +209,7 @@ export const AnalyticsOverview = () => {
             <CardDescription>Completed vs. pending tasks</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            <Chart 
-              type="pie"
-              data={taskStatusData}
-              dataKey="value"
-              nameKey="name"
-              className="h-60 w-full"
-            />
+            <CustomPieChart data={taskStatusData} />
           </CardContent>
         </Card>
         <Card className="col-span-1">
@@ -195,13 +218,7 @@ export const AnalyticsOverview = () => {
             <CardDescription>High priority vs. other tasks</CardDescription>
           </CardHeader>
           <CardContent className="px-2">
-            <Chart 
-              type="pie"
-              data={taskPriorityData}
-              dataKey="value"
-              nameKey="name"
-              className="h-60 w-full"
-            />
+            <CustomPieChart data={taskPriorityData} />
           </CardContent>
         </Card>
       </div>
