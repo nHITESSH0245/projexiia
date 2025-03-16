@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Task, Feedback } from '@/types';
+import { Project, Task, Feedback, Notification, Analytics } from '@/types';
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
@@ -324,3 +324,169 @@ export const getProjectFeedback = async (projectId: string) => {
     return { feedback: [], error };
   }
 };
+
+// Notification system functions
+export const getNotifications = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      return { notifications: [], error: new Error('User not authenticated') };
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Fetch notifications error:', error);
+      return { notifications: [], error };
+    }
+
+    return { notifications: data as Notification[], error: null };
+  } catch (error) {
+    console.error('Fetch notifications error:', error);
+    return { notifications: [], error };
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Mark notification as read error:', error);
+      return { notification: null, error };
+    }
+
+    return { notification: data as Notification, error: null };
+  } catch (error) {
+    console.error('Mark notification as read error:', error);
+    return { notification: null, error };
+  }
+};
+
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      return { error: new Error('User not authenticated') };
+    }
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userData.user.id)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Mark all notifications as read error:', error);
+      return { error };
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error('Mark all notifications as read error:', error);
+    return { error };
+  }
+};
+
+// Analytics functions
+export const getStudentAnalytics = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      return { analytics: null, error: new Error('User not authenticated') };
+    }
+
+    // Fetch projects data for analytics
+    const { data: projectsData, error: projectsError } = await supabase
+      .from('projects')
+      .select('status')
+      .eq('student_id', userData.user.id);
+
+    if (projectsError) {
+      console.error('Fetch projects for analytics error:', projectsError);
+      return { analytics: null, error: projectsError };
+    }
+
+    // Fetch tasks data for analytics
+    const { data: tasksData, error: tasksError } = await supabase
+      .from('tasks')
+      .select('status, priority, project_id')
+      .in('project_id', projectsData.map(p => p.id) || []);
+
+    if (tasksError) {
+      console.error('Fetch tasks for analytics error:', tasksError);
+      return { analytics: null, error: tasksError };
+    }
+
+    // Calculate analytics
+    const analytics: Analytics = {
+      pendingProjects: projectsData.filter(p => p.status === 'pending').length,
+      inReviewProjects: projectsData.filter(p => p.status === 'in_review').length,
+      changesRequestedProjects: projectsData.filter(p => p.status === 'changes_requested').length,
+      approvedProjects: projectsData.filter(p => p.status === 'approved').length,
+      completedTasks: tasksData.filter(t => t.status === 'completed').length,
+      pendingTasks: tasksData.filter(t => t.status !== 'completed').length,
+      highPriorityTasks: tasksData.filter(t => t.priority === 'high').length
+    };
+
+    return { analytics, error: null };
+  } catch (error) {
+    console.error('Get student analytics error:', error);
+    return { analytics: null, error };
+  }
+};
+
+export const getFacultyAnalytics = async () => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      return { analytics: null, error: new Error('User not authenticated') };
+    }
+
+    // Fetch all projects data for faculty analytics
+    const { data: projectsData, error: projectsError } = await supabase
+      .from('projects')
+      .select('status');
+
+    if (projectsError) {
+      console.error('Fetch projects for analytics error:', projectsError);
+      return { analytics: null, error: projectsError };
+    }
+
+    // Fetch all tasks data for faculty analytics
+    const { data: tasksData, error: tasksError } = await supabase
+      .from('tasks')
+      .select('status, priority');
+
+    if (tasksError) {
+      console.error('Fetch tasks for analytics error:', tasksError);
+      return { analytics: null, error: tasksError };
+    }
+
+    // Calculate analytics
+    const analytics: Analytics = {
+      pendingProjects: projectsData.filter(p => p.status === 'pending').length,
+      inReviewProjects: projectsData.filter(p => p.status === 'in_review').length,
+      changesRequestedProjects: projectsData.filter(p => p.status === 'changes_requested').length,
+      approvedProjects: projectsData.filter(p => p.status === 'approved').length,
+      completedTasks: tasksData.filter(t => t.status === 'completed').length,
+      pendingTasks: tasksData.filter(t => t.status !== 'completed').length,
+      highPriorityTasks: tasksData.filter(t => t.priority === 'high').length
+    };
+
+    return { analytics, error: null };
+  } catch (error) {
+    console.error('Get faculty analytics error:', error);
+    return { analytics: null, error };
+  }
+};
+

@@ -50,3 +50,24 @@ export interface Feedback {
     avatar_url?: string;
   };
 }
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  type: 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
+  related_id?: string;
+  created_at: string;
+}
+
+export interface Analytics {
+  pendingProjects: number;
+  inReviewProjects: number;
+  changesRequestedProjects: number;
+  approvedProjects: number;
+  completedTasks: number;
+  pendingTasks: number;
+  highPriorityTasks: number;
+}
