@@ -45,4 +45,8 @@ export interface Feedback {
   faculty_id: string;
   comment: string;
   created_at: string;
+  faculty?: {
+    name: string;
+    avatar_url?: string;
+  };
 }

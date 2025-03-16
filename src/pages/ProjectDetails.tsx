@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, MessageSquare, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistance } from 'date-fns';
 import { Project, Task } from '@/types';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { TaskForm } from '@/components/projects/TaskForm';
+import { FeedbackForm } from '@/components/projects/FeedbackForm';
+import { FeedbackList } from '@/components/projects/FeedbackList';
+import { updateTaskStatus, updateProjectStatus } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +24,10 @@ const ProjectDetails = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -49,6 +60,68 @@ const ProjectDetails = () => {
     
     fetchProject();
   }, [id]);
+
+  const refreshProject = async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          tasks(*),
+          profiles!projects_student_id_fkey(name, email, avatar_url)
+        `)
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      setProject(data as Project);
+    } catch (err: any) {
+      console.error('Error refreshing project:', err);
+      toast.error('Failed to refresh project data');
+    }
+  };
+
+  const handleUpdateTaskStatus = async (taskId: string, status: 'todo' | 'in_progress' | 'completed') => {
+    try {
+      const { task, error } = await updateTaskStatus(taskId, status);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Task status updated');
+      refreshProject();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update task status');
+    }
+  };
+
+  const handleUpdateProjectStatus = async (status: 'pending' | 'in_review' | 'changes_requested' | 'approved') => {
+    setIsUpdatingStatus(true);
+    try {
+      const { project: updatedProject, error } = await updateProjectStatus(id!, status);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(`Project is now ${status.replace('_', ' ')}`);
+      refreshProject();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update project status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleSubmitForReview = () => {
+    handleUpdateProjectStatus('in_review');
+  };
 
   if (isLoading) {
     return (
@@ -132,10 +205,80 @@ const ProjectDetails = () => {
             
             <div className="flex items-center space-x-3">
               {role === 'faculty' && (
-                <Button>Add Task</Button>
+                <>
+                  <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Task
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <TaskForm 
+                        projectId={project.id} 
+                        onSuccess={() => {
+                          setIsTaskDialogOpen(false);
+                          refreshProject();
+                        }}
+                        onCancel={() => setIsTaskDialogOpen(false)}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Add Feedback
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <FeedbackForm 
+                        projectId={project.id}
+                        taskId={selectedTaskId}
+                        onSuccess={() => {
+                          setIsFeedbackDialogOpen(false);
+                          setSelectedTaskId(undefined);
+                          refreshProject();
+                        }}
+                        onCancel={() => {
+                          setIsFeedbackDialogOpen(false);
+                          setSelectedTaskId(undefined);
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  
+                  {project.status !== 'approved' && (
+                    <Select 
+                      value={project.status} 
+                      onValueChange={(value) => handleUpdateProjectStatus(value as any)}
+                      disabled={isUpdatingStatus}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Update Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in_review">In Review</SelectItem>
+                        <SelectItem value="changes_requested">Request Changes</SelectItem>
+                        <SelectItem value="approved">Approve</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </>
               )}
+              
               {role === 'student' && project.status === 'pending' && (
-                <Button>Submit for Review</Button>
+                <Button onClick={handleSubmitForReview} disabled={isUpdatingStatus}>
+                  Submit for Review
+                </Button>
+              )}
+              
+              {role === 'student' && project.status === 'changes_requested' && (
+                <Button onClick={() => handleUpdateProjectStatus('in_review')} disabled={isUpdatingStatus}>
+                  Resubmit Project
+                </Button>
               )}
             </div>
           </div>
@@ -173,6 +316,24 @@ const ProjectDetails = () => {
                             <p className="text-xs text-muted-foreground mt-2">
                               Due: {new Date(task.due_date).toLocaleDateString()}
                             </p>
+                            
+                            {role === 'student' && (
+                              <div className="mt-3">
+                                <Select 
+                                  value={task.status} 
+                                  onValueChange={(value) => handleUpdateTaskStatus(task.id, value as any)}
+                                >
+                                  <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="todo">To Do</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-col items-end space-y-2">
                             <Badge
@@ -197,6 +358,20 @@ const ProjectDetails = () => {
                             >
                               {task.status.replace('_', ' ')}
                             </Badge>
+                            
+                            {role === 'faculty' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTaskId(task.id);
+                                  setIsFeedbackDialogOpen(true);
+                                }}
+                              >
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Feedback
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </Card>
@@ -205,6 +380,8 @@ const ProjectDetails = () => {
                 )}
               </CardContent>
             </Card>
+            
+            <FeedbackList projectId={project.id} />
           </div>
           
           <div className="space-y-6">

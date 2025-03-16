@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Task } from '@/types';
+import { Project, Task, Feedback } from '@/types';
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
@@ -31,7 +31,6 @@ export const signUp = async (
   role: 'student' | 'faculty'
 ) => {
   try {
-    // 1. Create the user in Auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -82,7 +81,6 @@ export const getCurrentUser = async () => {
       return { user: null, error };
     }
     
-    // Get the profile data which includes the role
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -296,7 +294,7 @@ export const provideFeedback = async (projectId: string, comment: string, taskId
     }
 
     toast.success('Feedback submitted successfully!');
-    return { feedback: data as any, error: null };
+    return { feedback: data as Feedback, error: null };
   } catch (error) {
     console.error('Feedback error:', error);
     toast.error('Failed to submit feedback. Please try again.');
@@ -320,7 +318,7 @@ export const getProjectFeedback = async (projectId: string) => {
       return { feedback: [], error };
     }
 
-    return { feedback: data as any, error: null };
+    return { feedback: data as Feedback[], error: null };
   } catch (error) {
     console.error('Fetch feedback error:', error);
     return { feedback: [], error };
