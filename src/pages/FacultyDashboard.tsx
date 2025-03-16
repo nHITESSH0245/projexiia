@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Button } from '@/components/ui/button';
@@ -8,18 +8,53 @@ import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, ClipboardCheck, Search, Calendar, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProjectCard } from '@/components/projects/ProjectCard';
+import { getAllProjects } from '@/lib/supabase';
+import { Project } from '@/types';
+import { Loader2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 
 const FacultyDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-
-  // Placeholder data - would be fetched from API in a real application
-  const mockStudentProjects = [];
-  const mockReviewRequests = [];
+  const [isLoading, setIsLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [reviewRequests, setReviewRequests] = useState<Project[]>([]);
+  
+  const fetchData = async () => {
+    setIsLoading(true);
+    const { projects, error } = await getAllProjects();
+    
+    if (error) {
+      console.error('Error fetching projects:', error);
+    } else {
+      setProjects(projects);
+      
+      // Filter projects that need review
+      const pending = projects.filter(
+        project => project.status === 'in_review' || project.status === 'pending'
+      );
+      setReviewRequests(pending);
+    }
+    
+    setIsLoading(false);
+  };
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
   
   const handleViewAllProjects = () => {
-    // Will be implemented in Phase 2
-    console.log('View all projects');
+    setActiveTab('projects');
   };
 
   return (
@@ -55,7 +90,7 @@ const FacultyDashboard = () => {
                   <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{projects.length}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -66,7 +101,7 @@ const FacultyDashboard = () => {
                   <Search className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{reviewRequests.length}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -77,7 +112,9 @@ const FacultyDashboard = () => {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">
+                    {new Set(projects.map(p => p.student_id)).size}
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -88,7 +125,11 @@ const FacultyDashboard = () => {
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0%</div>
+                  <div className="text-2xl font-bold">
+                    {projects.length ? 
+                      Math.round((projects.filter(p => p.status === 'approved').length / projects.length) * 100)
+                      : 0}%
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -100,14 +141,22 @@ const FacultyDashboard = () => {
                   <CardDescription>Recently updated student projects</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockStudentProjects.length === 0 ? (
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : projects.length === 0 ? (
                     <EmptyState
                       title="No projects yet"
                       description="Student projects will appear here once created"
                       icon={ClipboardCheck}
                     />
                   ) : (
-                    <div>Project list will appear here</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {projects.slice(0, 4).map((project) => (
+                        <ProjectCard key={project.id} project={project} />
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -117,14 +166,32 @@ const FacultyDashboard = () => {
                   <CardDescription>Projects waiting for your feedback</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockReviewRequests.length === 0 ? (
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : reviewRequests.length === 0 ? (
                     <EmptyState
                       title="No pending reviews"
                       description="You're all caught up!"
                       icon={Search}
                     />
                   ) : (
-                    <div>Reviews list will appear here</div>
+                    <div className="space-y-3">
+                      {reviewRequests.slice(0, 5).map((project) => (
+                        <div key={project.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div>
+                            <p className="font-medium">{project.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              By {project.profiles?.name || 'Unknown student'}
+                            </p>
+                          </div>
+                          <Link to={`/projects/${project.id}`}>
+                            <Button size="sm">Review</Button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -138,14 +205,63 @@ const FacultyDashboard = () => {
                 <CardDescription>View and monitor all student projects</CardDescription>
               </CardHeader>
               <CardContent>
-                {mockStudentProjects.length === 0 ? (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : projects.length === 0 ? (
                   <EmptyState
                     title="No projects yet"
                     description="Student projects will appear here once created"
                     icon={ClipboardCheck}
                   />
                 ) : (
-                  <div>Project list will appear here</div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Project Title</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Tasks</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projects.map((project) => (
+                        <TableRow key={project.id}>
+                          <TableCell className="font-medium">{project.title}</TableCell>
+                          <TableCell>{project.profiles?.name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                project.status === 'approved'
+                                  ? 'success'
+                                  : project.status === 'changes_requested'
+                                  ? 'destructive'
+                                  : project.status === 'in_review'
+                                  ? 'secondary'
+                                  : 'outline'
+                              }
+                            >
+                              {project.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {project.tasks ? Array.isArray(project.tasks) ? project.tasks.length : 0 : 0}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(project.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild size="sm">
+                              <Link to={`/projects/${project.id}`}>View</Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -158,11 +274,56 @@ const FacultyDashboard = () => {
                 <CardDescription>Manage student submissions requiring your feedback</CardDescription>
               </CardHeader>
               <CardContent>
-                <EmptyState
-                  title="No review requests"
-                  description="Review requests from students will appear here"
-                  icon={Search}
-                />
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : reviewRequests.length === 0 ? (
+                  <EmptyState
+                    title="No review requests"
+                    description="Review requests from students will appear here"
+                    icon={Search}
+                  />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Project Title</TableHead>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submission Date</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reviewRequests.map((project) => (
+                        <TableRow key={project.id}>
+                          <TableCell className="font-medium">{project.title}</TableCell>
+                          <TableCell>{project.profiles?.name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                project.status === 'in_review'
+                                  ? 'secondary'
+                                  : 'outline'
+                              }
+                            >
+                              {project.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(project.updated_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild size="sm">
+                              <Link to={`/projects/${project.id}`}>Review</Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -174,11 +335,54 @@ const FacultyDashboard = () => {
                 <CardDescription>View and manage students</CardDescription>
               </CardHeader>
               <CardContent>
-                <EmptyState
-                  title="No students registered yet"
-                  description="Student information will appear here once they register"
-                  icon={Users}
-                />
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : projects.length === 0 ? (
+                  <EmptyState
+                    title="No students registered yet"
+                    description="Student information will appear here once they register"
+                    icon={Users}
+                  />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Projects</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from(
+                        new Map(
+                          projects.map(project => [
+                            project.student_id,
+                            {
+                              id: project.student_id,
+                              name: project.profiles?.name || 'Unknown',
+                              email: project.profiles?.email || 'No email',
+                              projectCount: projects.filter(p => p.student_id === project.student_id).length
+                            }
+                          ])
+                        ).values()
+                      ).map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>{student.email}</TableCell>
+                          <TableCell>{student.projectCount}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="outline" disabled>
+                              View Projects
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

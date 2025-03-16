@@ -1,7 +1,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase, getCurrentUser } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { User, UserRole } from '@/types';
 
 interface AuthContextType {
@@ -41,11 +42,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           id: user.id,
           email: user.email || '',
           name: profile.name || user.email?.split('@')[0] || '',
-          role: profile.role,
+          role: profile.role as UserRole,
           avatar_url: profile.avatar_url,
           created_at: user.created_at,
         });
-        setRole(profile.role);
+        setRole(profile.role as UserRole);
       } else {
         setUser(null);
         setRole(null);
