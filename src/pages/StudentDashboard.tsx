@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -14,6 +13,7 @@ import { getStudentProjects } from '@/lib/supabase';
 import { Project, Task } from '@/types';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -32,7 +32,6 @@ const StudentDashboard = () => {
     } else {
       setProjects(projects);
       
-      // Extract active tasks from all projects
       const allTasks: Task[] = [];
       projects.forEach(project => {
         if (project.tasks && Array.isArray(project.tasks)) {
@@ -44,7 +43,6 @@ const StudentDashboard = () => {
         }
       });
       
-      // Sort tasks by priority and due date
       const sortedTasks = allTasks.sort((a, b) => {
         const priorityOrder = { high: 0, medium: 1, low: 2 };
         const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -107,7 +105,6 @@ const StudentDashboard = () => {
           
           <TabsContent value="overview" className="space-y-4 animate-fade-in">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Summary Cards */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">

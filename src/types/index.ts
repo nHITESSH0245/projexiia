@@ -18,6 +18,12 @@ export interface Project {
   status: 'pending' | 'in_review' | 'changes_requested' | 'approved';
   created_at: string;
   updated_at: string;
+  tasks?: Task[];
+  profiles?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
 }
 
 export interface Task {

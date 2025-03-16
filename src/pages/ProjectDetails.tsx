@@ -38,7 +38,7 @@ const ProjectDetails = () => {
           throw error;
         }
         
-        setProject(data);
+        setProject(data as Project);
       } catch (err: any) {
         console.error('Error fetching project:', err);
         setError(err.message || 'Failed to fetch project details');

@@ -1,7 +1,7 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Project, Task } from '@/types';
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
@@ -130,7 +130,7 @@ export const createProject = async (title: string, description: string) => {
     }
 
     toast.success('Project created successfully!');
-    return { project: data, error: null };
+    return { project: data as Project, error: null };
   } catch (error) {
     console.error('Project creation error:', error);
     toast.error('Failed to create project. Please try again.');
@@ -156,7 +156,7 @@ export const getStudentProjects = async () => {
       return { projects: [], error };
     }
 
-    return { projects: data, error: null };
+    return { projects: data as Project[], error: null };
   } catch (error) {
     console.error('Fetch projects error:', error);
     return { projects: [], error };
@@ -179,7 +179,7 @@ export const getAllProjects = async () => {
       return { projects: [], error };
     }
 
-    return { projects: data, error: null };
+    return { projects: data as Project[], error: null };
   } catch (error) {
     console.error('Fetch all projects error:', error);
     return { projects: [], error };
@@ -213,7 +213,7 @@ export const createTask = async (
     }
 
     toast.success('Task created successfully!');
-    return { task: data, error: null };
+    return { task: data as Task, error: null };
   } catch (error) {
     console.error('Task creation error:', error);
     toast.error('Failed to create task. Please try again.');
@@ -236,7 +236,7 @@ export const updateTaskStatus = async (taskId: string, status: 'todo' | 'in_prog
     }
 
     toast.success('Task updated successfully!');
-    return { task: data, error: null };
+    return { task: data as Task, error: null };
   } catch (error) {
     console.error('Task update error:', error);
     toast.error('Failed to update task. Please try again.');
@@ -259,7 +259,7 @@ export const updateProjectStatus = async (projectId: string, status: 'pending' |
     }
 
     toast.success('Project status updated!');
-    return { project: data, error: null };
+    return { project: data as Project, error: null };
   } catch (error) {
     console.error('Project update error:', error);
     toast.error('Failed to update project. Please try again.');
@@ -296,7 +296,7 @@ export const provideFeedback = async (projectId: string, comment: string, taskId
     }
 
     toast.success('Feedback submitted successfully!');
-    return { feedback: data, error: null };
+    return { feedback: data as any, error: null };
   } catch (error) {
     console.error('Feedback error:', error);
     toast.error('Failed to submit feedback. Please try again.');
@@ -320,7 +320,7 @@ export const getProjectFeedback = async (projectId: string) => {
       return { feedback: [], error };
     }
 
-    return { feedback: data, error: null };
+    return { feedback: data as any, error: null };
   } catch (error) {
     console.error('Fetch feedback error:', error);
     return { feedback: [], error };
