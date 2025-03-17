@@ -59,7 +59,7 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 py-3 px-4 md:px-6 backdrop-blur-lg bg-background/80 border-b border-border transition-all duration-200">
+    <header className="sticky top-0 z-40 py-3 px-4 md:px-6 backdrop-blur-lg bg-background/80 border-b border-border transition-all duration-200">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2 group">
           <LucideShapes 

@@ -57,7 +57,7 @@ const Login = () => {
 
   return (
     <Layout hideHeader className="bg-gradient-to-b from-background to-muted/30 min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-scale-in">
+      <div className="w-full max-w-md flex flex-col items-center">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 group">
             <LucideShapes 
@@ -68,10 +68,10 @@ const Login = () => {
           </Link>
         </div>
         
-        <Card className="border-border/50 shadow-lg">
+        <Card className="border-border/50 shadow-lg w-full">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
+            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
