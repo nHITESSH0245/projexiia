@@ -105,21 +105,27 @@ export const getCurrentUser = async () => {
 };
 
 // Project management functions
-export const createProject = async (title: string, description: string) => {
+export const createProject = async (title: string, description: string, teamId?: string) => {
   try {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) {
       return { error: new Error('User not authenticated') };
     }
 
+    const projectData: any = {
+      title,
+      description,
+      student_id: userData.user.id,
+      status: 'pending'
+    };
+
+    if (teamId) {
+      projectData.team_id = teamId;
+    }
+
     const { data, error } = await supabase
       .from('projects')
-      .insert({
-        title,
-        description,
-        student_id: userData.user.id,
-        status: 'pending'
-      })
+      .insert(projectData)
       .select()
       .single();
 

@@ -13,13 +13,16 @@ export interface User {
 export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'high' | 'medium' | 'low';
-export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
+export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline' | 'team_invite' | 'team_update';
+export type TeamMemberRole = 'leader' | 'member';
+export type TeamInviteStatus = 'pending' | 'accepted' | 'rejected';
 
 export interface Project {
   id: string;
   title: string;
   description: string;
   student_id: string;
+  team_id?: string;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
@@ -75,4 +78,48 @@ export interface Analytics {
   completedTasks: number;
   pendingTasks: number;
   highPriorityTasks: number;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+  members?: TeamMember[];
+  projects?: Project[];
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: TeamMemberRole;
+  join_date: string;
+  profile?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}
+
+export interface TeamInvite {
+  id: string;
+  team_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: TeamInviteStatus;
+  created_at: string;
+  updated_at: string;
+  team?: Team;
+  inviter?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
+  invitee?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
 }

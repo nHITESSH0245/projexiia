@@ -1,48 +1,44 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createProject } from '@/lib/supabase';
+import { createTeam } from '@/lib/team';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
-interface ProjectFormProps {
+interface TeamFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  teamId?: string;
 }
 
-export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+export const TeamForm = ({ onSuccess, onCancel }: TeamFormProps) => {
+  const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || !description.trim()) {
-      toast.error('Please fill in all required fields');
+    if (!name.trim()) {
+      toast.error('Please enter a team name');
       return;
     }
 
     setIsSubmitting(true);
     
     try {
-      const { project, error } = await createProject(title, description, teamId);
+      const { team, error } = await createTeam(name);
       
       if (error) {
-        toast.error(`Failed to create project: ${error.message}`);
+        toast.error(`Failed to create team: ${error.message}`);
       } else {
-        toast.success(`Project created successfully!${teamId ? ' Team members can now contribute to it.' : ''}`);
-        setTitle('');
-        setDescription('');
+        toast.success('Team created successfully!');
+        setName('');
         if (onSuccess) onSuccess();
       }
     } catch (error) {
-      console.error('Project creation error:', error);
+      console.error('Team creation error:', error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -50,30 +46,19 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>{teamId ? 'Create New Team Project' : 'Create New Project'}</CardTitle>
+        <CardTitle>Create New Team</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Project Title</Label>
+            <Label htmlFor="name">Team Name</Label>
             <Input
-              id="title"
-              placeholder="Enter project title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Project Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe your project..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
+              id="name"
+              placeholder="Enter team name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
             />
           </div>
@@ -91,7 +76,7 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
                 Creating...
               </>
             ) : (
-              'Create Project'
+              'Create Team'
             )}
           </Button>
         </CardFooter>
