@@ -75,10 +75,7 @@ export const getUserTeam = async () => {
     // Get all team members
     const { data: membersData, error: membersError } = await supabase
       .from('team_members')
-      .select(`
-        *,
-        profile:profiles(name, email, avatar_url)
-      `)
+      .select(`*`)
       .eq('team_id', memberData.team_id);
 
     if (membersError) {
@@ -86,9 +83,34 @@ export const getUserTeam = async () => {
       return { team: memberData.team as Team, members: [], error: membersError };
     }
 
+    // Get profiles for all team members
+    const memberIds = membersData.map(member => member.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select(`id, name, email, avatar_url`)
+      .in('id', memberIds);
+
+    if (profilesError) {
+      console.error('Fetch profiles error:', profilesError);
+      return { team: memberData.team as Team, members: [], error: profilesError };
+    }
+
+    // Merge member data with profiles
+    const members = membersData.map(member => {
+      const profile = profilesData.find(profile => profile.id === member.user_id);
+      return {
+        ...member,
+        profile: profile ? {
+          name: profile.name,
+          email: profile.email,
+          avatar_url: profile.avatar_url
+        } : undefined
+      } as TeamMember;
+    });
+
     return { 
       team: memberData.team as Team, 
-      members: membersData as TeamMember[], 
+      members: members, 
       userRole: memberData.role,
       error: null 
     };
@@ -201,22 +223,47 @@ export const getPendingInvites = async () => {
       return { invites: [], error: new Error('User not authenticated') };
     }
 
-    const { data, error } = await supabase
+    // Get team invites
+    const { data: invitesData, error: invitesError } = await supabase
       .from('team_invites')
       .select(`
         *,
-        team:teams(*),
-        inviter:profiles!team_invites_inviter_id_fkey(name, email, avatar_url)
+        team:teams(*)
       `)
       .eq('invitee_id', userData.user.id)
       .eq('status', 'pending');
 
-    if (error) {
-      console.error('Fetch pending invites error:', error);
-      return { invites: [], error };
+    if (invitesError) {
+      console.error('Fetch pending invites error:', invitesError);
+      return { invites: [], error: invitesError };
     }
 
-    return { invites: data as TeamInvite[], error: null };
+    // Get profiles for inviters
+    const inviterIds = invitesData.map(invite => invite.inviter_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select(`id, name, email, avatar_url`)
+      .in('id', inviterIds);
+
+    if (profilesError) {
+      console.error('Fetch profiles error:', profilesError);
+      return { invites: [], error: profilesError };
+    }
+
+    // Merge invite data with profiles
+    const invites = invitesData.map(invite => {
+      const inviterProfile = profilesData.find(profile => profile.id === invite.inviter_id);
+      return {
+        ...invite,
+        inviter: inviterProfile ? {
+          name: inviterProfile.name,
+          email: inviterProfile.email,
+          avatar_url: inviterProfile.avatar_url
+        } : undefined
+      } as TeamInvite;
+    });
+
+    return { invites, error: null };
   } catch (error) {
     console.error('Fetch pending invites error:', error);
     return { invites: [], error };
