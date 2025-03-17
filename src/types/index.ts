@@ -13,9 +13,10 @@ export interface User {
 export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'high' | 'medium' | 'low';
-export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline' | 'team_invite' | 'team_update';
+export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline' | 'team_invite' | 'team_update' | 'document_feedback';
 export type TeamMemberRole = 'leader' | 'member';
 export type TeamInviteStatus = 'pending' | 'accepted' | 'rejected';
+export type DocumentStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Project {
   id: string;
@@ -42,6 +43,20 @@ export interface Task {
   due_date: string;
   priority: TaskPriority;
   status: TaskStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Document {
+  id: string;
+  project_id: string;
+  name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by: string;
+  status: DocumentStatus;
+  faculty_remarks?: string;
   created_at: string;
   updated_at: string;
 }
