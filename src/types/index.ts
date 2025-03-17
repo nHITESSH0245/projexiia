@@ -1,4 +1,3 @@
-
 export type UserRole = 'student' | 'faculty';
 
 export interface User {
@@ -56,7 +55,7 @@ export interface Document {
   file_size: number;
   uploaded_by: string;
   status: DocumentStatus;
-  faculty_remarks?: string;
+  faculty_remarks?: string | null;
   created_at: string;
   updated_at: string;
   project?: {
@@ -64,7 +63,7 @@ export interface Document {
     student?: {
       name: string;
       email: string;
-      avatar_url?: string;
+      avatar_url?: string | null;
     };
   };
 }

@@ -2,128 +2,133 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
-import { File, Upload, X } from 'lucide-react';
+import { Upload, File as FileIcon, X, Check } from 'lucide-react';
 import { uploadDocument } from '@/lib/document';
+import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
 
 interface DocumentUploaderProps {
   projectId: string;
-  onSuccess: () => void;
+  onUploadComplete: () => void;
 }
 
-export function DocumentUploader({ projectId, onSuccess }: DocumentUploaderProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+export function DocumentUploader({ projectId, onUploadComplete }: DocumentUploaderProps) {
+  const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-    
-    // Just take the first file
-    setSelectedFile(acceptedFiles[0]);
+    if (acceptedFiles.length > 0) {
+      setFile(acceptedFiles[0]);
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 20 * 1024 * 1024, // 20MB max
   });
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!file) return;
     
     setUploading(true);
     setProgress(0);
     
     try {
-      const { document, error } = await uploadDocument(
-        projectId, 
-        selectedFile,
-        (progress) => setProgress(progress)
-      );
+      // Simple progress simulation since we can't track real progress
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          const next = prev + 5;
+          return next > 95 ? 95 : next;
+        });
+      }, 200);
       
-      if (error) {
-        throw error;
+      const result = await uploadDocument(projectId, file);
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      if (result.error) {
+        throw result.error;
       }
       
-      setSelectedFile(null);
-      onSuccess();
-    } catch (error: any) {
+      toast.success('Document uploaded successfully!');
+      setFile(null);
+      onUploadComplete();
+    } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload document');
+      toast.error('Failed to upload document');
     } finally {
       setUploading(false);
     }
   };
 
-  const clearSelectedFile = () => {
-    setSelectedFile(null);
+  const cancelUpload = () => {
+    setFile(null);
+    setProgress(0);
   };
 
   return (
-    <div className="space-y-4">
-      {!selectedFile ? (
-        <div
-          {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 cursor-pointer transition-colors ${
-            isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'
-          }`}
-        >
-          <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <Upload className="h-8 w-8 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Drag and drop a file here or click to browse</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Support for PDF, Word, PowerPoint, images, and more (Max 50MB)
-              </p>
-            </div>
+    <Card className="mb-4">
+      <CardContent className="p-4">
+        {!file ? (
+          <div 
+            {...getRootProps()} 
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+              ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+          >
+            <input {...getInputProps()} />
+            <Upload className="h-10 w-10 mb-2 mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground">
+              {isDragActive
+                ? "Drop the file here..."
+                : "Drag and drop a file here, or click to select a file"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              (Max file size: 20MB)
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <File className="h-8 w-8 text-primary" />
-              <div className="overflow-hidden">
-                <p className="font-medium truncate">{selectedFile.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatBytes(selectedFile.size)}
-                </p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <FileIcon className="h-8 w-8 flex-shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                </div>
               </div>
-            </div>
-            {!uploading && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={clearSelectedFile}
+                onClick={cancelUpload}
+                disabled={uploading}
               >
                 <X className="h-4 w-4" />
               </Button>
+            </div>
+            
+            {uploading && (
+              <div className="space-y-2">
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-right">{progress}%</p>
+              </div>
+            )}
+            
+            {!uploading && (
+              <div className="flex justify-end">
+                <Button onClick={handleUpload} className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload Document
+                </Button>
+              </div>
             )}
           </div>
-          
-          {uploading && (
-            <div className="mt-4">
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-muted-foreground mt-1 text-center">
-                {Math.round(progress)}% uploaded...
-              </p>
-            </div>
-          )}
-          
-          {!uploading && (
-            <div className="mt-4 flex justify-end">
-              <Button onClick={handleUpload}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -18,8 +18,6 @@ import {
   Loader2, 
   FileText, 
   File as FileIcon,
-  Download, 
-  Trash2, 
   ExternalLink 
 } from 'lucide-react';
 import { reviewDocument, getDocumentUrl } from '@/lib/document';
@@ -38,8 +36,13 @@ export function DocumentReviewForm({ document, onComplete, onCancel }: DocumentR
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const loadPreviewUrl = async () => {
-    const url = await getDocumentUrl(document.file_path);
-    setPreviewUrl(url);
+    try {
+      const url = await getDocumentUrl(document.file_path);
+      setPreviewUrl(url);
+    } catch (error) {
+      console.error('Failed to load document URL:', error);
+      toast.error('Failed to load document preview');
+    }
   };
   
   React.useEffect(() => {
