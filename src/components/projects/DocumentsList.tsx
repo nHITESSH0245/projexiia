@@ -15,16 +15,11 @@ import { getProjectDocuments, getDocumentUrl, deleteDocument } from '@/lib/docum
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { 
-  File, 
+  File as FileIcon, 
   FileText, 
-  FileImage,
-  FilePdf,
-  FileArchive,
-  FileSpreadsheet,
   Download, 
   Trash2, 
   Loader2,
-  Presentation,
   FileCheck,
   FileX
 } from 'lucide-react';
@@ -103,12 +98,12 @@ export function DocumentsList({ projectId, onDocumentChange }: DocumentsListProp
       }
       
       // Create a temporary anchor element
-      const a = document.createElement('a');
+      const a = window.document.createElement('a');
       a.href = url;
       a.download = document.name;
-      document.body.appendChild(a);
+      window.document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      window.document.body.removeChild(a);
       
     } catch (error) {
       console.error('Download error:', error);
@@ -129,19 +124,19 @@ export function DocumentsList({ projectId, onDocumentChange }: DocumentsListProp
     const fileType = document.file_type;
     
     if (fileType.includes('image')) {
-      return <FileImage className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     } else if (fileType.includes('pdf')) {
-      return <FilePdf className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     } else if (fileType.includes('spreadsheet') || fileType.includes('excel') || fileType.includes('csv')) {
-      return <FileSpreadsheet className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     } else if (fileType.includes('presentation') || fileType.includes('powerpoint')) {
-      return <Presentation className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     } else if (fileType.includes('zip') || fileType.includes('compressed')) {
-      return <FileArchive className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     } else if (fileType.includes('text') || fileType.includes('document')) {
       return <FileText className="h-10 w-10" />;
     } else {
-      return <File className="h-10 w-10" />;
+      return <FileIcon className="h-10 w-10" />;
     }
   };
 
@@ -169,7 +164,7 @@ export function DocumentsList({ projectId, onDocumentChange }: DocumentsListProp
     return (
       <Card className="border-dashed border-2 bg-background/50">
         <CardContent className="flex flex-col items-center justify-center py-8">
-          <File className="h-12 w-12 text-muted-foreground mb-3" />
+          <FileIcon className="h-12 w-12 text-muted-foreground mb-3" />
           <p className="text-muted-foreground text-center">No documents uploaded yet.</p>
         </CardContent>
       </Card>

@@ -17,11 +17,9 @@ import {
   FileX, 
   Loader2, 
   FileText, 
-  FileImage, 
-  FilePdf, 
-  FileArchive, 
-  File,
-  Presentation,
+  File as FileIcon,
+  Download, 
+  Trash2, 
   ExternalLink 
 } from 'lucide-react';
 import { reviewDocument, getDocumentUrl } from '@/lib/document';
@@ -75,17 +73,17 @@ export function DocumentReviewForm({ document, onComplete, onCancel }: DocumentR
     const fileType = document.file_type;
     
     if (fileType.includes('image')) {
-      return <FileImage className="h-12 w-12" />;
+      return <FileIcon className="h-12 w-12" />;
     } else if (fileType.includes('pdf')) {
-      return <FilePdf className="h-12 w-12" />;
+      return <FileIcon className="h-12 w-12" />;
     } else if (fileType.includes('presentation') || fileType.includes('powerpoint')) {
-      return <Presentation className="h-12 w-12" />;
+      return <FileIcon className="h-12 w-12" />;
     } else if (fileType.includes('zip') || fileType.includes('compressed')) {
-      return <FileArchive className="h-12 w-12" />;
+      return <FileIcon className="h-12 w-12" />;
     } else if (fileType.includes('text') || fileType.includes('document')) {
       return <FileText className="h-12 w-12" />;
     } else {
-      return <File className="h-12 w-12" />;
+      return <FileIcon className="h-12 w-12" />;
     }
   };
 

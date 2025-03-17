@@ -34,12 +34,6 @@ export const uploadDocument = async (
         cacheControl: '3600',
         upsert: false,
         contentType: file.type,
-        onUploadProgress: (progress) => {
-          if (onProgress) {
-            const percent = (progress.loaded / progress.total) * 100;
-            onProgress(percent);
-          }
-        }
       });
 
     if (error) {
