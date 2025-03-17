@@ -1,169 +1,179 @@
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { updateDocumentStatus } from '@/lib/document';
+import React, { useState } from 'react';
 import { Document, DocumentStatus } from '@/types';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  FileCheck, 
+  FileX, 
+  Loader2, 
+  FileText, 
+  FileImage, 
+  FilePdf, 
+  FileArchive, 
+  File,
+  Presentation,
+  ExternalLink 
+} from 'lucide-react';
+import { reviewDocument, getDocumentUrl } from '@/lib/document';
+import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
-import { Check, X, File, FileText, FileImage, FilePresentation } from 'lucide-react';
 
 interface DocumentReviewFormProps {
-  document: Document & { url: string };
-  onSuccess: () => void;
+  document: Document;
+  onComplete: () => void;
   onCancel: () => void;
 }
 
-interface FormValues {
-  status: DocumentStatus;
-  remarks: string;
-}
+export function DocumentReviewForm({ document, onComplete, onCancel }: DocumentReviewFormProps) {
+  const [remarks, setRemarks] = useState(document.faculty_remarks || '');
+  const [submitting, setSubmitting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  const loadPreviewUrl = async () => {
+    const url = await getDocumentUrl(document.file_path);
+    setPreviewUrl(url);
+  };
+  
+  React.useEffect(() => {
+    loadPreviewUrl();
+  }, [document]);
 
-export function DocumentReviewForm({ document, onSuccess, onCancel }: DocumentReviewFormProps) {
-  const form = useForm<FormValues>({
-    defaultValues: {
-      status: 'approved',
-      remarks: '',
-    },
-  });
-  
-  const { handleSubmit, control, formState: { isSubmitting } } = form;
-  
-  const onSubmit = async (values: FormValues) => {
+  const handleReview = async (status: DocumentStatus) => {
+    setSubmitting(true);
+    
     try {
-      const { document: updatedDocument, error } = await updateDocumentStatus(
-        document.id,
-        values.status,
-        values.remarks
-      );
+      const { success, error } = await reviewDocument(document.id, status, remarks);
       
-      if (error) throw error;
-      onSuccess();
+      if (error) {
+        throw error;
+      }
+      
+      if (success) {
+        toast.success(`Document ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
+        onComplete();
+      }
     } catch (error) {
-      console.error('Error updating document status:', error);
+      console.error('Review error:', error);
+      toast.error('Failed to review document');
+    } finally {
+      setSubmitting(false);
     }
   };
-  
-  const renderFileIcon = (fileType: string) => {
+
+  // Function to get the appropriate icon based on file type
+  const getFileIcon = () => {
+    const fileType = document.file_type;
+    
     if (fileType.includes('image')) {
-      return <FileImage className="h-6 w-6 text-blue-500" />;
+      return <FileImage className="h-12 w-12" />;
     } else if (fileType.includes('pdf')) {
-      return <FileText className="h-6 w-6 text-red-500" />;
-    } else if (
-      fileType.includes('presentation') || 
-      fileType.includes('powerpoint') || 
-      fileType.includes('ppt')
-    ) {
-      return <FilePresentation className="h-6 w-6 text-orange-500" />;
+      return <FilePdf className="h-12 w-12" />;
+    } else if (fileType.includes('presentation') || fileType.includes('powerpoint')) {
+      return <Presentation className="h-12 w-12" />;
+    } else if (fileType.includes('zip') || fileType.includes('compressed')) {
+      return <FileArchive className="h-12 w-12" />;
+    } else if (fileType.includes('text') || fileType.includes('document')) {
+      return <FileText className="h-12 w-12" />;
     } else {
-      return <File className="h-6 w-6 text-gray-500" />;
+      return <File className="h-12 w-12" />;
     }
   };
-  
+
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Review Document</h2>
-      
-      <div className="mb-6 p-4 border rounded-md bg-muted/30">
-        <div className="flex items-center space-x-3">
-          {renderFileIcon(document.file_type)}
-          <div>
-            <h3 className="font-medium">{document.name}</h3>
-            <p className="text-sm text-muted-foreground">{formatBytes(document.file_size)}</p>
+    <Dialog open={true} onOpenChange={() => onCancel()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Review Document</DialogTitle>
+          <DialogDescription>
+            Review and provide feedback for this student document.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="flex items-start gap-4">
+            <div className="text-primary">
+              {getFileIcon()}
+            </div>
+            <div>
+              <h3 className="font-medium">{document.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {formatBytes(document.file_size)} • Uploaded on {new Date(document.created_at).toLocaleDateString()}
+              </p>
+              {previewUrl && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 gap-2"
+                  onClick={() => window.open(previewUrl, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open document
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="remarks">Faculty Remarks</Label>
+            <Textarea
+              id="remarks"
+              placeholder="Provide feedback or comments about this document"
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              rows={4}
+            />
           </div>
         </div>
-        <div className="mt-4">
+        
+        <DialogFooter className="sm:justify-between">
           <Button
+            type="button"
             variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => window.open(document.url, '_blank')}
+            onClick={onCancel}
+            disabled={submitting}
           >
-            View Document
+            Cancel
           </Button>
-        </div>
-      </div>
-      
-      <Form {...form}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={control}
-            name="status"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Document Status</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex flex-col space-y-1"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="approved" />
-                      </FormControl>
-                      <FormLabel className="font-normal flex items-center">
-                        <Check className="h-4 w-4 mr-2 text-green-500" />
-                        Approve Document
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="rejected" />
-                      </FormControl>
-                      <FormLabel className="font-normal flex items-center">
-                        <X className="h-4 w-4 mr-2 text-red-500" />
-                        Reject Document
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={control}
-            name="remarks"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Remarks</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Add your feedback or comments about this document"
-                    className="resize-none"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  The student will see these remarks along with your decision.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" type="button" onClick={onCancel}>
-              Cancel
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => handleReview('rejected')}
+              disabled={submitting}
+              className="gap-2"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileX className="h-4 w-4" />
+              )}
+              Reject
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              Submit Review
+            <Button
+              variant="default"
+              onClick={() => handleReview('approved')}
+              disabled={submitting}
+              className="gap-2"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileCheck className="h-4 w-4" />
+              )}
+              Approve
             </Button>
           </div>
-        </form>
-      </Form>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

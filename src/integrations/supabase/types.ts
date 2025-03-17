@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      documents: {
+        Row: {
+          created_at: string
+          faculty_remarks: string | null
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          name: string
+          project_id: string
+          status: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          faculty_remarks?: string | null
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          name: string
+          project_id: string
+          status?: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          faculty_remarks?: string | null
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          name?: string
+          project_id?: string
+          status?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           comment: string

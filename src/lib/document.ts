@@ -1,100 +1,81 @@
 
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Document, DocumentStatus } from '@/types';
-import { createNotification } from './notification';
-import { formatBytes } from '@/lib/utils';
+import { supabase } from "@/integrations/supabase/client";
+import { Document, DocumentStatus } from "@/types";
+import { toast } from "sonner";
+import { createNotification } from "./notification";
 
-// Upload a document to a project
+// Helper function to generate a unique file path
+const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
+  const timestamp = new Date().getTime();
+  const cleanFileName = fileName.replace(/[^a-zA-Z0-9.]/g, '_');
+  return `${userId}/${projectId}/${timestamp}_${cleanFileName}`;
+};
+
+// Upload a document to storage and record in database
 export const uploadDocument = async (
   projectId: string,
   file: File,
   onProgress?: (progress: number) => void
-) => {
+): Promise<{ document: Document | null; error: Error | null }> => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      toast.error('You must be logged in to upload documents');
-      return { document: null, error: new Error('User not authenticated') };
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('You must be logged in to upload documents');
     }
 
-    // Create a folder structure: project_documents/user_id/project_id/filename
-    const userId = userData.user.id;
-    const timestamp = new Date().getTime();
-    const fileExtension = file.name.split('.').pop();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const uniqueFileName = `${timestamp}-${sanitizedFileName}`;
-    const filePath = `${userId}/${projectId}/${uniqueFileName}`;
-
+    // Create a unique file path
+    const filePath = generateFilePath(user.id, projectId, file.name);
+    
     // Upload file to storage
-    const { data: fileData, error: fileError } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
+        contentType: file.type,
         onUploadProgress: (progress) => {
           if (onProgress) {
-            onProgress(progress.percent || 0);
+            const percent = (progress.loaded / progress.total) * 100;
+            onProgress(percent);
           }
-        },
+        }
       });
 
-    if (fileError) {
-      toast.error(`Failed to upload file: ${fileError.message}`);
-      return { document: null, error: fileError };
+    if (error) {
+      throw error;
     }
 
-    // Get public URL for the file
-    const { data: publicURL } = supabase.storage
-      .from('project_documents')
-      .getPublicUrl(filePath);
-
-    // Create record in documents table
-    const { data, error } = await supabase
+    // Create document record in database
+    const { data: document, error: dbError } = await supabase
       .from('documents')
       .insert({
         project_id: projectId,
         name: file.name,
-        file_path: filePath,
+        file_path: data.path,
         file_type: file.type,
         file_size: file.size,
-        uploaded_by: userId,
+        uploaded_by: user.id,
         status: 'pending'
       })
       .select()
       .single();
 
-    if (error) {
-      toast.error(`Failed to save document info: ${error.message}`);
-      
-      // Clean up the uploaded file if record creation failed
-      await supabase.storage
-        .from('project_documents')
-        .remove([filePath]);
-        
-      return { document: null, error };
+    if (dbError) {
+      // If database insert fails, try to delete the uploaded file
+      await supabase.storage.from('project_documents').remove([data.path]);
+      throw dbError;
     }
 
-    // Get project info for notification
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('title')
-      .eq('id', projectId)
-      .single();
-
-    // Notify student that document was uploaded successfully
-    toast.success(`Document "${file.name}" uploaded successfully!`);
-
-    return { document: data as Document, error: null };
-  } catch (error: any) {
-    console.error('Document upload error:', error);
-    toast.error('Failed to upload document. Please try again.');
-    return { document: null, error };
+    return { document: document as Document, error: null };
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    return { document: null, error: error as Error };
   }
 };
 
-// Get project documents
-export const getProjectDocuments = async (projectId: string) => {
+// Get all documents for a project
+export const getProjectDocuments = async (projectId: string): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
     const { data, error } = await supabase
       .from('documents')
@@ -103,132 +84,169 @@ export const getProjectDocuments = async (projectId: string) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Fetch documents error:', error);
-      return { documents: [], error };
+      throw error;
     }
 
-    // Get public URLs for all files
-    const documentsWithUrls = await Promise.all(
-      (data as Document[]).map(async (doc) => {
-        const { data: publicURL } = supabase.storage
-          .from('project_documents')
-          .getPublicUrl(doc.file_path);
-
-        return { ...doc, url: publicURL.publicUrl };
-      })
-    );
-
-    return { documents: documentsWithUrls as (Document & { url: string })[], error: null };
+    return { documents: data as Document[], error: null };
   } catch (error) {
-    console.error('Fetch documents error:', error);
-    return { documents: [], error };
+    console.error('Error fetching project documents:', error);
+    return { documents: [], error: error as Error };
   }
 };
 
-// Update document status and remarks (for faculty)
-export const updateDocumentStatus = async (
-  documentId: string,
-  status: DocumentStatus,
-  remarks?: string
-) => {
+// Get all documents for faculty review
+export const getAllDocumentsForReview = async (): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) {
-      toast.error('You must be logged in to review documents');
-      return { document: null, error: new Error('User not authenticated') };
-    }
-
-    // Get faculty role
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userData.user.id)
-      .single();
-
-    if (!profileData || profileData.role !== 'faculty') {
-      toast.error('Only faculty members can review documents');
-      return { document: null, error: new Error('Unauthorized') };
-    }
-
-    // Update document status and remarks
     const { data, error } = await supabase
       .from('documents')
-      .update({
-        status,
-        faculty_remarks: remarks
-      })
-      .eq('id', documentId)
-      .select('*, projects!inner(*)')
-      .single();
+      .select(`
+        *,
+        projects:project_id (
+          *,
+          profiles:student_id ( name, email, avatar_url )
+        )
+      `)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      toast.error(`Failed to update document status: ${error.message}`);
-      return { document: null, error };
+      throw error;
     }
 
-    // Create notification for the student
-    const statusText = status === 'approved' ? 'approved' : 'rejected';
-    const notificationTitle = `Document ${statusText}`;
-    const notificationMessage = `Your document "${data.name}" has been ${statusText} by faculty.`;
-    
-    await createNotification(
-      data.projects.student_id,
-      notificationTitle,
-      notificationMessage,
-      'document_feedback',
-      data.project_id
-    );
+    // Transform the data to match our Document interface
+    const documents = data.map(doc => {
+      const projectData = doc.projects as any;
+      const studentData = projectData?.profiles || {};
+      
+      return {
+        id: doc.id,
+        project_id: doc.project_id,
+        name: doc.name,
+        file_path: doc.file_path,
+        file_type: doc.file_type,
+        file_size: doc.file_size,
+        uploaded_by: doc.uploaded_by,
+        status: doc.status as DocumentStatus,
+        faculty_remarks: doc.faculty_remarks,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
+        project: {
+          title: projectData?.title || 'Unknown Project',
+          student: {
+            name: studentData?.name || 'Unknown Student',
+            email: studentData?.email || '',
+            avatar_url: studentData?.avatar_url
+          }
+        }
+      } as Document;
+    });
 
-    toast.success(`Document ${statusText} successfully`);
-    return { document: data as Document, error: null };
-  } catch (error: any) {
-    console.error('Document status update error:', error);
-    toast.error('Failed to update document status. Please try again.');
-    return { document: null, error };
+    return { documents, error: null };
+  } catch (error) {
+    console.error('Error fetching documents for review:', error);
+    return { documents: [], error: error as Error };
+  }
+};
+
+// Get public URL for a document
+export const getDocumentUrl = async (filePath: string): Promise<string> => {
+  try {
+    const { data } = await supabase.storage
+      .from('project_documents')
+      .getPublicUrl(filePath);
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error getting document URL:', error);
+    return '';
   }
 };
 
 // Delete a document
-export const deleteDocument = async (documentId: string) => {
+export const deleteDocument = async (documentId: string): Promise<{ success: boolean; error: Error | null }> => {
   try {
-    // Get document details first to get file path
-    const { data: docData, error: docError } = await supabase
+    // First, get the document to find its file path
+    const { data: document, error: fetchError } = await supabase
       .from('documents')
       .select('*')
       .eq('id', documentId)
       .single();
 
-    if (docError) {
-      toast.error(`Failed to find document: ${docError.message}`);
-      return { success: false, error: docError };
+    if (fetchError) {
+      throw fetchError;
     }
 
     // Delete the file from storage
     const { error: storageError } = await supabase.storage
       .from('project_documents')
-      .remove([docData.file_path]);
+      .remove([document.file_path]);
 
     if (storageError) {
-      toast.error(`Failed to delete file: ${storageError.message}`);
-      return { success: false, error: storageError };
+      throw storageError;
     }
 
-    // Delete the document record
-    const { error } = await supabase
+    // Delete the database record
+    const { error: dbError } = await supabase
       .from('documents')
       .delete()
       .eq('id', documentId);
 
-    if (error) {
-      toast.error(`Failed to delete document record: ${error.message}`);
-      return { success: false, error };
+    if (dbError) {
+      throw dbError;
     }
 
-    toast.success('Document deleted successfully');
     return { success: true, error: null };
-  } catch (error: any) {
-    console.error('Document deletion error:', error);
-    toast.error('Failed to delete document. Please try again.');
-    return { success: false, error };
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    return { success: false, error: error as Error };
+  }
+};
+
+// Review a document (faculty only)
+export const reviewDocument = async (
+  documentId: string,
+  status: DocumentStatus,
+  remarks?: string
+): Promise<{ success: boolean; error: Error | null }> => {
+  try {
+    // Update document status and remarks
+    const { data: document, error: updateError } = await supabase
+      .from('documents')
+      .update({
+        status,
+        faculty_remarks: remarks || null
+      })
+      .eq('id', documentId)
+      .select(`
+        *,
+        projects:project_id (
+          *
+        )
+      `)
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Create notification for the student
+    const projectData = document.projects as any;
+    if (projectData && projectData.student_id) {
+      const statusText = status === 'approved' ? 'approved' : 'rejected';
+      const notificationTitle = `Document ${statusText}`;
+      const notificationMessage = `Your document "${document.name}" has been ${statusText} by faculty.`;
+
+      await createNotification(
+        projectData.student_id,
+        notificationTitle,
+        notificationMessage,
+        'document_feedback',
+        document.project_id
+      );
+    }
+
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error reviewing document:', error);
+    return { success: false, error: error as Error };
   }
 };

@@ -4,32 +4,31 @@ import {
   Card, 
   CardContent, 
   CardDescription, 
+  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Document, DocumentStatus, UserRole } from '@/types';
+import { getProjectDocuments, getDocumentUrl, deleteDocument } from '@/lib/document';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { 
-  Download, 
   File, 
   FileText, 
-  FileImage, 
-  FilePresentation, 
-  X, 
-  Check, 
-  Trash, 
-  MessageSquare,
-  Loader2
+  FileImage,
+  FilePdf,
+  FileArchive,
+  FileSpreadsheet,
+  Download, 
+  Trash2, 
+  Loader2,
+  Presentation,
+  FileCheck,
+  FileX
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { DocumentUploader } from './DocumentUploader';
-import { DocumentReviewForm } from './DocumentReviewForm';
-import { getProjectDocuments, deleteDocument } from '@/lib/document';
-import { useAuth } from '@/contexts/AuthContext';
-import { Document } from '@/types';
 import { formatBytes } from '@/lib/utils';
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,243 +38,241 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { DocumentReviewForm } from './DocumentReviewForm';
 
 interface DocumentsListProps {
   projectId: string;
+  onDocumentChange?: () => void;
 }
 
-export function DocumentsList({ projectId }: DocumentsListProps) {
-  const { role } = useAuth();
-  const [documents, setDocuments] = useState<(Document & { url: string })[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<(Document & { url: string }) | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
+export function DocumentsList({ projectId, onDocumentChange }: DocumentsListProps) {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [documentToReview, setDocumentToReview] = useState<Document | null>(null);
+  const { user, role } = useAuth();
 
-  const fetchDocuments = async () => {
-    setIsLoading(true);
-    try {
-      const { documents, error } = await getProjectDocuments(projectId);
-      if (error) throw error;
-      setDocuments(documents);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
+  const loadDocuments = async () => {
+    setLoading(true);
+    const { documents, error } = await getProjectDocuments(projectId);
+    
+    if (error) {
       toast.error('Failed to load documents');
-    } finally {
-      setIsLoading(false);
+    } else {
+      setDocuments(documents);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchDocuments();
+    loadDocuments();
   }, [projectId]);
 
-  const handleUploadSuccess = () => {
-    setIsUploaderOpen(false);
-    fetchDocuments();
-  };
-
-  const handleReviewDocument = (document: Document & { url: string }) => {
-    setSelectedDocument(document);
-    setIsReviewDialogOpen(true);
-  };
-
-  const handleDeleteDocument = async () => {
-    if (!documentToDelete) return;
+  const handleDelete = async (documentId: string) => {
+    setDeleting(documentId);
     
     try {
-      const { success, error } = await deleteDocument(documentToDelete);
-      if (error) throw error;
+      const { success, error } = await deleteDocument(documentId);
+      
+      if (error) {
+        throw error;
+      }
       
       if (success) {
-        fetchDocuments();
-        setDeleteDialogOpen(false);
-        setDocumentToDelete(null);
+        toast.success('Document deleted successfully');
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        if (onDocumentChange) {
+          onDocumentChange();
+        }
       }
     } catch (error) {
       console.error('Error deleting document:', error);
+      toast.error('Failed to delete document');
+    } finally {
+      setDeleting(null);
     }
   };
 
-  const confirmDelete = (docId: string) => {
-    setDocumentToDelete(docId);
-    setDeleteDialogOpen(true);
+  const handleDownload = async (document: Document) => {
+    try {
+      const url = await getDocumentUrl(document.file_path);
+      if (!url) {
+        throw new Error('Could not generate download URL');
+      }
+      
+      // Create a temporary anchor element
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = document.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download document');
+    }
   };
 
-  const renderFileIcon = (fileType: string) => {
+  const handleReviewComplete = () => {
+    setDocumentToReview(null);
+    loadDocuments();
+    if (onDocumentChange) {
+      onDocumentChange();
+    }
+  };
+
+  // Function to get the appropriate icon based on file type
+  const getFileIcon = (document: Document) => {
+    const fileType = document.file_type;
+    
     if (fileType.includes('image')) {
-      return <FileImage className="h-6 w-6 text-blue-500" />;
+      return <FileImage className="h-10 w-10" />;
     } else if (fileType.includes('pdf')) {
-      return <FileText className="h-6 w-6 text-red-500" />;
-    } else if (
-      fileType.includes('presentation') || 
-      fileType.includes('powerpoint') || 
-      fileType.includes('ppt')
-    ) {
-      return <FilePresentation className="h-6 w-6 text-orange-500" />;
+      return <FilePdf className="h-10 w-10" />;
+    } else if (fileType.includes('spreadsheet') || fileType.includes('excel') || fileType.includes('csv')) {
+      return <FileSpreadsheet className="h-10 w-10" />;
+    } else if (fileType.includes('presentation') || fileType.includes('powerpoint')) {
+      return <Presentation className="h-10 w-10" />;
+    } else if (fileType.includes('zip') || fileType.includes('compressed')) {
+      return <FileArchive className="h-10 w-10" />;
+    } else if (fileType.includes('text') || fileType.includes('document')) {
+      return <FileText className="h-10 w-10" />;
     } else {
-      return <File className="h-6 w-6 text-gray-500" />;
+      return <File className="h-10 w-10" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // Function to get the status badge
+  const getStatusBadge = (status: DocumentStatus) => {
     switch (status) {
       case 'approved':
-        return <Badge variant="success">Approved</Badge>;
+        return <Badge variant="success" className="ml-2 flex items-center gap-1"><FileCheck className="h-3 w-3" /> Approved</Badge>;
       case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
+        return <Badge variant="destructive" className="ml-2 flex items-center gap-1"><FileX className="h-3 w-3" /> Rejected</Badge>;
       default:
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline" className="ml-2">Pending Review</Badge>;
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Project Documents</CardTitle>
-          <CardDescription>All documents submitted for this project</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (documents.length === 0) {
+    return (
+      <Card className="border-dashed border-2 bg-background/50">
+        <CardContent className="flex flex-col items-center justify-center py-8">
+          <File className="h-12 w-12 text-muted-foreground mb-3" />
+          <p className="text-muted-foreground text-center">No documents uploaded yet.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Project Documents</CardTitle>
-          <CardDescription>All documents submitted for this project</CardDescription>
-        </div>
-        {role === 'student' && (
-          <Dialog open={isUploaderOpen} onOpenChange={setIsUploaderOpen}>
-            <DialogTrigger asChild>
-              <Button>Upload Document</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <CardTitle className="mb-4">Upload Document</CardTitle>
-              <DocumentUploader 
-                projectId={projectId} 
-                onSuccess={handleUploadSuccess} 
-              />
-            </DialogContent>
-          </Dialog>
-        )}
-      </CardHeader>
-      <CardContent>
-        {documents.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>No documents have been uploaded yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {documents.map((doc) => (
-              <Card key={doc.id} className="overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      {renderFileIcon(doc.file_type)}
-                      <div>
-                        <h4 className="font-medium">{doc.name}</h4>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <p className="text-xs text-muted-foreground">
-                            {formatBytes(doc.file_size)}
-                          </p>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <p className="text-xs text-muted-foreground">
-                            Uploaded {format(new Date(doc.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        {doc.faculty_remarks && (
-                          <div className="mt-2 text-sm">
-                            <p className="font-medium">Faculty remarks:</p>
-                            <p className="text-muted-foreground">{doc.faculty_remarks}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(doc.status)}
-                    </div>
+    <div className="space-y-4">
+      {documents.map(document => (
+        <Card key={document.id} className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-4">
+              <div className="text-primary">
+                {getFileIcon(document)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium truncate">{document.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {formatBytes(document.file_size)} • Uploaded on {new Date(document.created_at).toLocaleDateString()}
+                    </p>
+                    {document.faculty_remarks && (
+                      <p className="text-sm mt-2 bg-muted p-2 rounded-sm">
+                        <span className="font-medium">Remarks:</span> {document.faculty_remarks}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(doc.url, '_blank')}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                    
-                    {role === 'faculty' && doc.status === 'pending' && (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleReviewDocument(doc)}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Review
-                      </Button>
-                    )}
-                    
-                    {role === 'student' && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => confirmDelete(doc.id)}
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    )}
+                  <div>
+                    {getStatusBadge(document.status)}
                   </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </CardContent>
-
-      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          {selectedDocument && (
-            <DocumentReviewForm 
-              document={selectedDocument}
-              onSuccess={() => {
-                setIsReviewDialogOpen(false);
-                fetchDocuments();
-              }}
-              onCancel={() => setIsReviewDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this document? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDocument} className="bg-destructive text-destructive-foreground">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2 bg-muted/50 py-2 px-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownload(document)}
+              className="gap-1"
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
+            
+            {role === 'faculty' && document.status === 'pending' && (
+              <Button
+                size="sm"
+                onClick={() => setDocumentToReview(document)}
+                className="gap-1"
+              >
+                Review
+              </Button>
+            )}
+            
+            {role === 'student' && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={!!deleting}
+                    className="gap-1"
+                  >
+                    {deleting === document.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{document.name}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => handleDelete(document.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </CardFooter>
+        </Card>
+      ))}
+      
+      {documentToReview && (
+        <DocumentReviewForm
+          document={documentToReview}
+          onComplete={handleReviewComplete}
+          onCancel={() => setDocumentToReview(null)}
+        />
+      )}
+    </div>
   );
 }

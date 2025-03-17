@@ -59,6 +59,14 @@ export interface Document {
   faculty_remarks?: string;
   created_at: string;
   updated_at: string;
+  project?: {
+    title: string;
+    student?: {
+      name: string;
+      email: string;
+      avatar_url?: string;
+    };
+  };
 }
 
 export interface Feedback {
