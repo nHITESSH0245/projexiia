@@ -1,4 +1,5 @@
 
+
 -- Create project_documents storage bucket if it doesn't exist
 INSERT INTO storage.buckets (id, name, public, avif_autodetection)
 VALUES ('project_documents', 'project_documents', true, false)
@@ -27,3 +28,4 @@ CREATE POLICY "Users can delete own files"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'project_documents' AND (storage.foldername(name))[1] = auth.uid()::text);
+

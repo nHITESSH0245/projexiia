@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -14,6 +15,7 @@ import { TaskForm } from '@/components/projects/TaskForm';
 import { FeedbackForm } from '@/components/projects/FeedbackForm';
 import { FeedbackList } from '@/components/projects/FeedbackList';
 import { DocumentsList } from '@/components/projects/DocumentsList';
+import { DocumentUploader } from '@/components/projects/DocumentUploader';
 import { updateTaskStatus, updateProjectStatus } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +30,7 @@ const ProjectDetails = () => {
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [documentsRefreshTrigger, setDocumentsRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -121,6 +124,10 @@ const ProjectDetails = () => {
 
   const handleSubmitForReview = () => {
     handleUpdateProjectStatus('in_review');
+  };
+
+  const handleDocumentUploadComplete = () => {
+    setDocumentsRefreshTrigger(prev => prev + 1);
   };
 
   if (isLoading) {
@@ -295,7 +302,17 @@ const ProjectDetails = () => {
               </CardContent>
             </Card>
             
-            <DocumentsList projectId={project.id} />
+            {role === 'student' && (
+              <DocumentUploader 
+                projectId={project.id}
+                onUploadComplete={handleDocumentUploadComplete}
+              />
+            )}
+            
+            <DocumentsList 
+              projectId={project.id} 
+              refreshTrigger={documentsRefreshTrigger}
+            />
             
             <Card>
               <CardHeader>

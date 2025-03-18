@@ -14,8 +14,7 @@ const generateFilePath = (userId: string, projectId: string, fileName: string): 
 // Upload a document to storage and record in database
 export const uploadDocument = async (
   projectId: string,
-  file: File,
-  onProgress?: (progress: number) => void
+  file: File
 ): Promise<{ document: Document | null; error: Error | null }> => {
   try {
     // Get current user
