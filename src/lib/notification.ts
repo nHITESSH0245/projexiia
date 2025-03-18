@@ -58,7 +58,6 @@ export const markAllNotificationsAsRead = async () => {
       return { error: new Error('User not authenticated') };
     }
 
-    // Use type assertion to handle the missing type in the database types
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -86,7 +85,6 @@ export const createNotification = async (
   relatedId?: string
 ) => {
   try {
-    // Use type assertion to handle the missing type in the database types
     const { data, error } = await supabase
       .from('notifications')
       .insert({

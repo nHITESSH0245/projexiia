@@ -244,21 +244,24 @@ export const createTask = async (
 
 export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   try {
+    console.log(`Updating task ${taskId} to status ${status}`);
+    
     const { data, error } = await supabase
       .from('tasks')
       .update({ status })
       .eq('id', taskId)
-      .select()
+      .select('*')
       .single();
 
     if (error) {
+      console.error('Task update error:', error);
       toast.error(`Failed to update task: ${error.message}`);
       return { task: null, error };
     }
 
     toast.success('Task updated successfully!');
     return { task: data as Task, error: null };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Task update error:', error);
     toast.error('Failed to update task. Please try again.');
     return { task: null, error };
@@ -267,14 +270,17 @@ export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
 
 export const updateProjectStatus = async (projectId: string, status: ProjectStatus) => {
   try {
+    console.log(`Updating project ${projectId} to status ${status}`);
+    
     const { data, error } = await supabase
       .from('projects')
       .update({ status })
       .eq('id', projectId)
-      .select()
+      .select('*')
       .single();
 
     if (error) {
+      console.error('Project update error:', error);
       toast.error(`Failed to update project: ${error.message}`);
       return { project: null, error };
     }
@@ -297,7 +303,7 @@ export const updateProjectStatus = async (projectId: string, status: ProjectStat
 
     toast.success('Project status updated!');
     return { project: data as Project, error: null };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Project update error:', error);
     toast.error('Failed to update project. Please try again.');
     return { project: null, error };
