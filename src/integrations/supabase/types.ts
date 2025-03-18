@@ -176,6 +176,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           description: string | null
+          document_id: string | null
           due_date: string
           id: string
           project_id: string
@@ -186,6 +187,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          document_id?: string | null
           due_date: string
           id?: string
           project_id: string
@@ -196,6 +198,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          document_id?: string | null
           due_date?: string
           id?: string
           project_id?: string
@@ -203,6 +206,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_milestones_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_milestones_project_id_fkey"
             columns: ["project_id"]

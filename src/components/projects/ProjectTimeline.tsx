@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle, Plus, PencilIcon, Trash2, AlertTriangle } from 'lucide-react';
+import { Clock, CheckCircle, Plus, PencilIcon, Trash2, AlertTriangle, Upload } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { format, isAfter, isPast, formatDistance } from 'date-fns';
 import { MilestoneForm } from './MilestoneForm';
@@ -12,7 +12,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { 
   getProjectMilestones, 
   markMilestoneAsCompleted, 
-  deleteProjectMilestone 
+  deleteProjectMilestone,
+  updateMilestoneDocument
 } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { uploadDocument } from '@/lib/document';
 
 interface Milestone {
   id: string;
@@ -36,6 +38,7 @@ interface Milestone {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  document_id: string | null;
 }
 
 interface ProjectTimelineProps {
@@ -51,7 +54,9 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [milestoneToDelete, setMilestoneToDelete] = useState<string | null>(null);
+  const [uploadingMilestoneId, setUploadingMilestoneId] = useState<string | null>(null);
   const isFaculty = role === 'faculty';
+  const isStudent = role === 'student';
   const isProjectActive = status !== 'approved';
 
   const fetchMilestones = async () => {
@@ -116,6 +121,35 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
     }
   };
 
+  const handleFileUpload = async (milestoneId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    setUploadingMilestoneId(milestoneId);
+    
+    try {
+      // Upload document
+      const { document, error } = await uploadDocument(projectId, file);
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (document) {
+        // Link document to milestone
+        await updateMilestoneDocument(milestoneId, document.id);
+        toast.success('Document uploaded successfully! Waiting for faculty approval.');
+        fetchMilestones();
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast.error('Failed to upload document');
+    } finally {
+      setUploadingMilestoneId(null);
+    }
+  };
+
   const calculateProgress = () => {
     if (milestones.length === 0) return 0;
     const completedCount = milestones.filter(m => m.completed_at).length;
@@ -127,6 +161,13 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
       return {
         badge: <Badge variant="success">Completed</Badge>,
         icon: <CheckCircle className="h-5 w-5 text-green-500" />
+      };
+    }
+    
+    if (milestone.document_id && !milestone.completed_at) {
+      return {
+        badge: <Badge variant="secondary">Pending Approval</Badge>,
+        icon: <Clock className="h-5 w-5 text-amber-500" />
       };
     }
     
@@ -203,12 +244,14 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
             {milestones.map((milestone, index) => {
               const isCompleted = !!milestone.completed_at;
               const isDue = isPast(new Date(milestone.due_date)) && !isCompleted;
+              const hasDocument = !!milestone.document_id;
               const status = getMilestoneStatus(milestone);
+              const isUploading = uploadingMilestoneId === milestone.id;
               
               return (
                 <div key={milestone.id} className="relative pl-8">
                   <div className={`absolute left-[14px] h-3 w-3 rounded-full mt-1.5 transform -translate-x-1/2 ${
-                    isCompleted ? 'bg-green-500' : isDue ? 'bg-red-500' : 'bg-gray-300'
+                    isCompleted ? 'bg-green-500' : hasDocument ? 'bg-amber-500' : isDue ? 'bg-red-500' : 'bg-gray-300'
                   }`}></div>
                   
                   <div className="bg-card border rounded-lg p-4 shadow-sm">
@@ -240,13 +283,51 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
                       </div>
                       
                       <div className="flex space-x-2">
-                        {role === 'student' && isProjectActive && (
+                        {isStudent && isProjectActive && !isCompleted && !hasDocument && (
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id={`file-upload-${milestone.id}`}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => handleFileUpload(milestone.id, e)}
+                              disabled={isUploading}
+                              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.jpeg,.png"
+                            />
+                            <Button
+                              variant="default"
+                              size="sm"
+                              disabled={isUploading}
+                              className="relative"
+                            >
+                              {isUploading ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-2" />
+                              )}
+                              {isUploading ? 'Uploading...' : 'Upload Document'}
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {isStudent && isProjectActive && isCompleted && (
                           <Button
-                            variant={isCompleted ? "outline" : "default"}
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleToggleComplete(milestone.id, isCompleted)}
+                            disabled
                           >
-                            {isCompleted ? 'Mark Incomplete' : 'Mark Complete'}
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                            Completed
+                          </Button>
+                        )}
+                        
+                        {isStudent && isProjectActive && !isCompleted && hasDocument && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                          >
+                            <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                            Awaiting Approval
                           </Button>
                         )}
                         

@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'student' | 'faculty';
 
 export interface User {
@@ -56,6 +57,7 @@ export interface ProjectMilestone {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  document_id: string | null;
 }
 
 export interface Document {

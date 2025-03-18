@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -482,6 +483,40 @@ export const updateProjectMilestone = async (
   } catch (error) {
     console.error('Milestone update error:', error);
     toast.error('Failed to update milestone. Please try again.');
+    return { milestone: null, error };
+  }
+};
+
+export const updateMilestoneDocument = async (milestoneId: string, documentId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .update({
+        document_id: documentId
+      })
+      .eq('id', milestoneId)
+      .select('*, projects(student_id, title)')
+      .single();
+
+    if (error) {
+      toast.error(`Failed to link document to milestone: ${error.message}`);
+      return { milestone: null, error };
+    }
+
+    if (data && data.projects) {
+      // Send notification about document upload
+      await createNotification(
+        data.projects.student_id,
+        'Document Uploaded for Milestone',
+        `A document has been uploaded for milestone "${data.title}" and is pending approval`,
+        'document_feedback',
+        data.project_id
+      );
+    }
+
+    return { milestone: data, error: null };
+  } catch (error) {
+    console.error('Update milestone document error:', error);
     return { milestone: null, error };
   }
 };
