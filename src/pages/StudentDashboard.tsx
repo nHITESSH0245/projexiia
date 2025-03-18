@@ -61,6 +61,10 @@ const StudentDashboard = () => {
     fetchData();
   };
 
+  const handleCreateProject = () => {
+    setIsProjectDialogOpen(true);
+  };
+
   return (
     <Layout>
       <div className="container py-6 max-w-7xl mx-auto px-4 md:px-6">
@@ -99,7 +103,7 @@ const StudentDashboard = () => {
               </div>
             ) : (
               <>
-                {analytics && <AnalyticsOverview analytics={analytics} />}
+                {analytics && <AnalyticsOverview analytics={analytics} role="student" />}
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <Card className="col-span-full">
@@ -115,12 +119,10 @@ const StudentDashboard = () => {
                           title="No projects yet"
                           description="Create your first project to get started"
                           icon={ClipboardCheck}
-                          action={
-                            <Button onClick={() => setIsProjectDialogOpen(true)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Create Project
-                            </Button>
-                          }
+                          action={{
+                            label: "Create Project",
+                            onClick: handleCreateProject
+                          }}
                         />
                       ) : (
                         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -145,7 +147,7 @@ const StudentDashboard = () => {
                     Manage and track all your projects
                   </CardDescription>
                 </div>
-                <Button onClick={() => setIsProjectDialogOpen(true)}>
+                <Button onClick={handleCreateProject}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Project
                 </Button>
@@ -160,12 +162,10 @@ const StudentDashboard = () => {
                     title="No projects yet"
                     description="Create your first project to get started"
                     icon={ClipboardCheck}
-                    action={
-                      <Button onClick={() => setIsProjectDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Project
-                      </Button>
-                    }
+                    action={{
+                      label: "Create Project",
+                      onClick: handleCreateProject
+                    }}
                   />
                 ) : (
                   <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -197,12 +197,10 @@ const StudentDashboard = () => {
                   title="No teams yet"
                   description="Create or join a team to collaborate with others"
                   icon={Users}
-                  action={
-                    <Button variant="outline">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Team
-                    </Button>
-                  }
+                  action={{
+                    label: "Create Team",
+                    onClick: () => console.log("Create team clicked")
+                  }}
                 />
               </CardContent>
             </Card>
