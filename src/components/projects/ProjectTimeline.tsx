@@ -102,9 +102,13 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
         const { error } = await deleteProjectMilestone(milestoneToDelete);
         if (!error) {
           fetchMilestones();
+          toast.success('Milestone deleted successfully');
+        } else {
+          toast.error('Failed to delete milestone');
         }
       } catch (error) {
         console.error('Error deleting milestone:', error);
+        toast.error('An error occurred while deleting milestone');
       } finally {
         setDeleteDialogOpen(false);
         setMilestoneToDelete(null);
@@ -138,7 +142,10 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
       
       if (document) {
         // Link document to milestone
-        await updateMilestoneDocument(milestoneId, document.id);
+        const result = await updateMilestoneDocument(milestoneId, document.id);
+        if (result.error) {
+          throw result.error;
+        }
         toast.success('Document uploaded successfully! Waiting for faculty approval.');
         fetchMilestones();
       }
@@ -147,6 +154,10 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
       toast.error('Failed to upload document');
     } finally {
       setUploadingMilestoneId(null);
+      // Clear the file input
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
