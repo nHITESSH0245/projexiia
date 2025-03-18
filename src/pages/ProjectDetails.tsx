@@ -16,6 +16,7 @@ import { FeedbackForm } from '@/components/projects/FeedbackForm';
 import { FeedbackList } from '@/components/projects/FeedbackList';
 import { DocumentsList } from '@/components/projects/DocumentsList';
 import { DocumentUploader } from '@/components/projects/DocumentUploader';
+import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { updateTaskStatus, updateProjectStatus } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -312,6 +313,12 @@ const ProjectDetails = () => {
             <DocumentsList 
               projectId={project.id} 
               refreshTrigger={documentsRefreshTrigger}
+            />
+            
+            {/* Add Project Timeline component */}
+            <ProjectTimeline 
+              projectId={project.id} 
+              status={project.status} 
             />
             
             <Card>

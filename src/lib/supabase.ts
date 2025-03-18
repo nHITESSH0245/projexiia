@@ -386,6 +386,172 @@ export const getProjectFeedback = async (projectId: string) => {
   }
 };
 
+// Project milestone functions
+export const createProjectMilestone = async (
+  projectId: string, 
+  title: string, 
+  description: string, 
+  dueDate: Date
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .insert({
+        project_id: projectId,
+        title,
+        description,
+        due_date: dueDate.toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error(`Failed to create milestone: ${error.message}`);
+      return { milestone: null, error };
+    }
+
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('student_id, title')
+      .eq('id', projectId)
+      .single();
+
+    if (projectData) {
+      await createNotification(
+        projectData.student_id,
+        'New Timeline Milestone',
+        `A new milestone "${title}" has been added to your project "${projectData.title}"`,
+        'deadline',
+        projectId
+      );
+    }
+
+    toast.success('Milestone created successfully!');
+    return { milestone: data, error: null };
+  } catch (error) {
+    console.error('Milestone creation error:', error);
+    toast.error('Failed to create milestone. Please try again.');
+    return { milestone: null, error };
+  }
+};
+
+export const updateProjectMilestone = async (
+  milestoneId: string,
+  updates: {
+    title?: string;
+    description?: string;
+    due_date?: Date;
+    completed_at?: Date | null;
+  }
+) => {
+  try {
+    const updateData: any = {};
+    
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.due_date !== undefined) updateData.due_date = updates.due_date.toISOString();
+    if (updates.completed_at !== undefined) {
+      updateData.completed_at = updates.completed_at ? updates.completed_at.toISOString() : null;
+    }
+
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .update(updateData)
+      .eq('id', milestoneId)
+      .select('*, projects(student_id, title)')
+      .single();
+
+    if (error) {
+      toast.error(`Failed to update milestone: ${error.message}`);
+      return { milestone: null, error };
+    }
+
+    if (data && data.projects && updates.completed_at) {
+      // If milestone was completed, send notification
+      await createNotification(
+        data.projects.student_id,
+        'Milestone Status Updated',
+        `Milestone "${data.title}" for project "${data.projects.title}" has been marked as completed`,
+        'status_change',
+        data.project_id
+      );
+    }
+
+    toast.success('Milestone updated successfully!');
+    return { milestone: data, error: null };
+  } catch (error) {
+    console.error('Milestone update error:', error);
+    toast.error('Failed to update milestone. Please try again.');
+    return { milestone: null, error };
+  }
+};
+
+export const deleteProjectMilestone = async (milestoneId: string) => {
+  try {
+    const { error } = await supabase
+      .from('project_milestones')
+      .delete()
+      .eq('id', milestoneId);
+
+    if (error) {
+      toast.error(`Failed to delete milestone: ${error.message}`);
+      return { error };
+    }
+
+    toast.success('Milestone deleted successfully!');
+    return { error: null };
+  } catch (error) {
+    console.error('Milestone deletion error:', error);
+    toast.error('Failed to delete milestone. Please try again.');
+    return { error };
+  }
+};
+
+export const getProjectMilestones = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('due_date', { ascending: true });
+
+    if (error) {
+      console.error('Fetch milestones error:', error);
+      return { milestones: [], error };
+    }
+
+    return { milestones: data, error: null };
+  } catch (error) {
+    console.error('Fetch milestones error:', error);
+    return { milestones: [], error };
+  }
+};
+
+export const markMilestoneAsCompleted = async (milestoneId: string, completed: boolean = true) => {
+  try {
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .update({
+        completed_at: completed ? new Date().toISOString() : null
+      })
+      .eq('id', milestoneId)
+      .select('*, projects(student_id, title)')
+      .single();
+
+    if (error) {
+      toast.error(`Failed to update milestone status: ${error.message}`);
+      return { milestone: null, error };
+    }
+
+    toast.success(completed ? 'Milestone marked as completed!' : 'Milestone marked as incomplete');
+    return { milestone: data, error: null };
+  } catch (error) {
+    console.error('Milestone status update error:', error);
+    toast.error('Failed to update milestone status. Please try again.');
+    return { milestone: null, error };
+  }
+};
+
 // Analytics functions
 export const getStudentAnalytics = async () => {
   try {
