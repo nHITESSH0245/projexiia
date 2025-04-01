@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole } from "@/types";
 import { toast } from "sonner";
@@ -775,7 +774,7 @@ export const getProjectFeedback = async (projectId: string) => {
     
     // Transform the data to match the expected format
     const formattedFeedback = data.map(item => {
-      const facultyData = item.faculty || {};
+      const facultyData = item.faculty || {} as any;
       let nameData = null;
       let emailData = null;
       let avatarData = null;
