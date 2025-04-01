@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Document, DocumentStatus } from "@/types";
+import { Document, DocumentStatus, User, UserRole } from "@/types";
 import { toast } from "sonner";
-import { createNotification } from "./notification";
 
 // Helper function to generate a unique file path
 const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
@@ -267,16 +266,18 @@ export const createProjectMilestone = async (
   projectId: string,
   title: string,
   description: string | null,
-  dueDate: string
+  dueDate: Date | string
 ) => {
   try {
+    const dueDateStr = typeof dueDate === 'string' ? dueDate : dueDate.toISOString();
+    
     const { data, error } = await supabase
       .from('project_milestones')
       .insert({
         project_id: projectId,
         title,
         description,
-        due_date: dueDate
+        due_date: dueDateStr
       })
       .select()
       .single();
@@ -297,13 +298,20 @@ export const updateProjectMilestone = async (
   updates: {
     title?: string;
     description?: string | null;
-    due_date?: string;
+    due_date?: Date | string;
   }
 ) => {
   try {
+    const processedUpdates = { ...updates };
+    if (updates.due_date) {
+      processedUpdates.due_date = typeof updates.due_date === 'string' 
+        ? updates.due_date 
+        : updates.due_date.toISOString();
+    }
+    
     const { data, error } = await supabase
       .from('project_milestones')
-      .update(updates)
+      .update(processedUpdates)
       .eq('id', milestoneId)
       .select()
       .single();
@@ -484,5 +492,311 @@ export const createNotification = async (
   } catch (error: any) {
     console.error('Error creating notification:', error);
     return { notification: null, error };
+  }
+};
+
+// Add the missing functions for auth and other operations
+export const signIn = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { user: data.user, error: null };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    return { user: null, error };
+  }
+};
+
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { error: null };
+  } catch (error: any) {
+    console.error('Sign out error:', error);
+    return { error };
+  }
+};
+
+export const signUp = async (email: string, password: string, name: string, role: UserRole) => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role
+        }
+      }
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { user: data.user, error: null };
+  } catch (error: any) {
+    console.error('Sign up error:', error);
+    return { user: null, error };
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { user: null, profile: null, error: null };
+    }
+    
+    // Get user profile
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    
+    return { user, profile, error: null };
+  } catch (error: any) {
+    console.error('Get current user error:', error);
+    return { user: null, profile: null, error };
+  }
+};
+
+export const createProject = async (title: string, description: string, teamId?: string) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to create a project');
+    }
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        title,
+        description,
+        student_id: user.id,
+        team_id: teamId || null,
+        status: 'pending'
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { project: data, error: null };
+  } catch (error: any) {
+    console.error('Create project error:', error);
+    return { project: null, error };
+  }
+};
+
+export const getStudentProjects = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to view your projects');
+    }
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('student_id', user.id)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { projects: data, error: null };
+  } catch (error: any) {
+    console.error('Get student projects error:', error);
+    return { projects: [], error };
+  }
+};
+
+export const getAllProjects = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select(`
+        *,
+        profiles!projects_student_id_fkey (*)
+      `)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { projects: data, error: null };
+  } catch (error: any) {
+    console.error('Get all projects error:', error);
+    return { projects: [], error };
+  }
+};
+
+export const getStudentAnalytics = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to view analytics');
+    }
+    
+    // You would implement analytics gathering logic here
+    // This is a placeholder
+    const analytics = {
+      totalProjects: 0,
+      completedProjects: 0,
+      pendingTasks: 0,
+      upcomingDeadlines: 0
+    };
+    
+    return { analytics, error: null };
+  } catch (error: any) {
+    console.error('Get student analytics error:', error);
+    return { analytics: null, error };
+  }
+};
+
+export const createTask = async (
+  projectId: string,
+  title: string,
+  description: string,
+  dueDate: Date,
+  priority: string
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        project_id: projectId,
+        title,
+        description,
+        due_date: dueDate.toISOString(),
+        priority,
+        status: 'pending'
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { task: data, error: null };
+  } catch (error: any) {
+    console.error('Create task error:', error);
+    return { task: null, error };
+  }
+};
+
+export const provideFeedback = async (
+  projectId: string,
+  comment: string,
+  taskId?: string
+) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('You must be logged in to provide feedback');
+    }
+    
+    const { data, error } = await supabase
+      .from('feedback')
+      .insert({
+        project_id: projectId,
+        comment,
+        faculty_id: user.id,
+        task_id: taskId || null
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Notify the student about the feedback
+    const { data: project } = await supabase
+      .from('projects')
+      .select('student_id')
+      .eq('id', projectId)
+      .single();
+      
+    if (project) {
+      await createNotification(
+        project.student_id,
+        'New Feedback Received',
+        'You have received new feedback on your project',
+        'feedback',
+        projectId
+      );
+    }
+    
+    return { feedback: data, error: null };
+  } catch (error: any) {
+    console.error('Provide feedback error:', error);
+    return { feedback: null, error };
+  }
+};
+
+export const getProjectFeedback = async (projectId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('feedback')
+      .select(`
+        *,
+        faculty:faculty_id (
+          id,
+          name:profiles(name),
+          email:profiles(email),
+          avatar_url:profiles(avatar_url)
+        )
+      `)
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Transform the data to match the expected format
+    const formattedFeedback = data.map(item => ({
+      ...item,
+      faculty: {
+        id: item.faculty?.id,
+        name: item.faculty?.name?.[0]?.name || 'Faculty',
+        email: item.faculty?.email?.[0]?.email || '',
+        avatar_url: item.faculty?.avatar_url?.[0]?.avatar_url || null
+      }
+    }));
+    
+    return { feedback: formattedFeedback, error: null };
+  } catch (error: any) {
+    console.error('Get project feedback error:', error);
+    return { feedback: [], error };
   }
 };
