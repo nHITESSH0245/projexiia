@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, Plus, PencilIcon, Trash2, AlertTriangle, Upload } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { format, isAfter, isPast, formatDistance } from 'date-fns';
+import { format, isPast, formatDistance } from 'date-fns';
 import { MilestoneForm } from './MilestoneForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -302,7 +302,7 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
                               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                               onChange={(e) => handleFileUpload(milestone.id, e)}
                               disabled={isUploading}
-                              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.jpeg,.png"
+                              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.jpeg,.png,.gif"
                             />
                             <Button
                               variant="default"
@@ -358,6 +358,26 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
+                            {hasDocument && !isCompleted && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleComplete(milestone.id, isCompleted)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Approve
+                              </Button>
+                            )}
+                            {isCompleted && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleComplete(milestone.id, isCompleted)}
+                              >
+                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                Revoke Approval
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>

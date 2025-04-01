@@ -1,6 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole } from "@/types";
 import { toast } from "sonner";
+import { createNotification } from "./notification";
 
 // Helper function to generate a unique file path
 const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
@@ -470,40 +472,6 @@ export const getTeamMembers = async (teamId: string) => {
   }
 };
 
-// Notification functions
-export const createNotification = async (
-  userId: string,
-  title: string,
-  message: string,
-  type: string,
-  relatedId?: string
-) => {
-  try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert([
-        {
-          user_id: userId,
-          title,
-          message,
-          type,
-          related_id: relatedId,
-        },
-      ])
-      .select()
-      .single();
-      
-    if (error) {
-      throw error;
-    }
-    
-    return { notification: data, error: null };
-  } catch (error: any) {
-    console.error('Error creating notification:', error);
-    return { notification: null, error };
-  }
-};
-
 // Auth functions
 export const signIn = async (email: string, password: string) => {
   try {
@@ -808,17 +776,29 @@ export const getProjectFeedback = async (projectId: string) => {
     // Transform the data to match the expected format
     const formattedFeedback = data.map(item => {
       const facultyData = item.faculty || {};
-      const nameData = facultyData.name && facultyData.name.length > 0 ? facultyData.name[0] : null;
-      const emailData = facultyData.email && facultyData.email.length > 0 ? facultyData.email[0] : null;
-      const avatarData = facultyData.avatar_url && facultyData.avatar_url.length > 0 ? facultyData.avatar_url[0] : null;
+      let nameData = null;
+      let emailData = null;
+      let avatarData = null;
+      
+      if (facultyData.name && Array.isArray(facultyData.name) && facultyData.name.length > 0) {
+        nameData = facultyData.name[0];
+      }
+      
+      if (facultyData.email && Array.isArray(facultyData.email) && facultyData.email.length > 0) {
+        emailData = facultyData.email[0];
+      }
+      
+      if (facultyData.avatar_url && Array.isArray(facultyData.avatar_url) && facultyData.avatar_url.length > 0) {
+        avatarData = facultyData.avatar_url[0];
+      }
       
       return {
         ...item,
         faculty: {
           id: facultyData.id || '',
-          name: nameData ? nameData.name : 'Faculty',
-          email: emailData ? emailData.email : '',
-          avatar_url: avatarData ? avatarData.avatar_url : null
+          name: nameData && nameData.name ? nameData.name : 'Faculty',
+          email: emailData && emailData.email ? emailData.email : '',
+          avatar_url: avatarData && avatarData.avatar_url ? avatarData.avatar_url : null
         }
       };
     });
