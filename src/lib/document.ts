@@ -37,12 +37,25 @@ export const uploadDocument = async (
       console.log('Creating project_documents bucket');
       // Create the bucket if it doesn't exist
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
-        public: false
+        public: false,
+        fileSizeLimit: 50 * 1024 * 1024 // 50MB limit
       });
       
       if (bucketError) {
         console.error('Error creating bucket:', bucketError);
         throw new Error('Failed to create storage bucket: ' + bucketError.message);
+      }
+      
+      // Set up RLS policies for the bucket
+      const { error: policyError } = await supabase.rpc('create_storage_policy', {
+        bucket_name: 'project_documents',
+        policy_name: 'Allow authenticated users to upload files',
+        definition: 'auth.role() = \'authenticated\''
+      });
+      
+      if (policyError) {
+        console.warn('Warning setting bucket policy:', policyError);
+        // Continue anyway, we don't want to block users if policy creation fails
       }
     }
     

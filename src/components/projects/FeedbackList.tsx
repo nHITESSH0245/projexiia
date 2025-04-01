@@ -20,6 +20,8 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeedback = async () => {
+    if (!projectId) return;
+    
     try {
       setIsLoading(true);
       setError(null); // Reset error state when fetching
@@ -40,7 +42,9 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   };
 
   useEffect(() => {
-    fetchFeedback();
+    if (projectId) {
+      fetchFeedback();
+    }
   }, [projectId]);
 
   const getInitials = (name: string) => {

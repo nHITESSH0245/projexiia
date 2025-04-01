@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { uploadDocument } from '@/lib/document';
+import { TimelineDocumentUploader } from './TimelineDocumentUploader';
 
 interface Milestone {
   id: string;
@@ -55,6 +54,7 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [milestoneToDelete, setMilestoneToDelete] = useState<string | null>(null);
   const [uploadingMilestoneId, setUploadingMilestoneId] = useState<string | null>(null);
+  const [showUploader, setShowUploader] = useState<string | null>(null);
   const isFaculty = role === 'faculty';
   const isStudent = role === 'student';
   const isProjectActive = status !== 'approved';
@@ -133,7 +133,6 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
     setUploadingMilestoneId(milestoneId);
     
     try {
-      // Upload document
       const { document, error } = await uploadDocument(projectId, file);
       
       if (error) {
@@ -141,7 +140,6 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
       }
       
       if (document) {
-        // Link document to milestone
         const result = await updateMilestoneDocument(milestoneId, document.id);
         if (result.error) {
           throw result.error;
@@ -154,11 +152,15 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
       toast.error('Failed to upload document');
     } finally {
       setUploadingMilestoneId(null);
-      // Clear the file input
       if (event.target) {
         event.target.value = '';
       }
     }
+  };
+
+  const handleUploadComplete = () => {
+    setShowUploader(null);
+    fetchMilestones();
   };
 
   const calculateProgress = () => {
@@ -258,6 +260,7 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
               const hasDocument = !!milestone.document_id;
               const status = getMilestoneStatus(milestone);
               const isUploading = uploadingMilestoneId === milestone.id;
+              const isShowingUploader = showUploader === milestone.id;
               
               return (
                 <div key={milestone.id} className="relative pl-8">
@@ -267,7 +270,7 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
                   
                   <div className="bg-card border rounded-lg p-4 shadow-sm">
                     <div className="flex justify-between items-start">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-medium text-lg">{milestone.title}</h4>
                         <div className="flex items-center mt-1 space-x-3">
                           {status.badge}
@@ -291,33 +294,39 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
                         {milestone.description && (
                           <p className="text-sm mt-2">{milestone.description}</p>
                         )}
+
+                        {isShowingUploader && isStudent && isProjectActive && !isCompleted && !hasDocument && (
+                          <div className="mt-3 border rounded p-3 bg-background">
+                            <TimelineDocumentUploader 
+                              projectId={projectId} 
+                              milestoneId={milestone.id}
+                              onUploadComplete={handleUploadComplete}
+                            />
+                          </div>
+                        )}
                       </div>
                       
-                      <div className="flex space-x-2">
-                        {isStudent && isProjectActive && !isCompleted && !hasDocument && (
-                          <div className="relative">
-                            <input
-                              type="file"
-                              id={`file-upload-${milestone.id}`}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              onChange={(e) => handleFileUpload(milestone.id, e)}
-                              disabled={isUploading}
-                              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.jpeg,.png,.gif"
-                            />
-                            <Button
-                              variant="default"
-                              size="sm"
-                              disabled={isUploading}
-                              className="relative"
-                            >
-                              {isUploading ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4 mr-2" />
-                              )}
-                              {isUploading ? 'Uploading...' : 'Upload Document'}
-                            </Button>
-                          </div>
+                      <div className="flex flex-col space-y-2">
+                        {isStudent && isProjectActive && !isCompleted && !hasDocument && !isShowingUploader && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowUploader(milestone.id)}
+                            className="gap-1"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload
+                          </Button>
+                        )}
+
+                        {isShowingUploader && !hasDocument && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowUploader(null)}
+                          >
+                            Cancel
+                          </Button>
                         )}
                         
                         {isStudent && isProjectActive && isCompleted && (
