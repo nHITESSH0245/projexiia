@@ -3,10 +3,22 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Use environment variables if available, otherwise fallback to hardcoded values
 const SUPABASE_URL = "https://tnlyjkajoovwviuwrecb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRubHlqa2Fqb292d3ZpdXdyZWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMDEwMjcsImV4cCI6MjA1NzY3NzAyN30.N9A0vZcTjsRdUaY00Nd9d_cRwDyPEBfPHX1gqOEKdjE";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-application-name': 'faculty-student-portal'
+    }
+  }
+});

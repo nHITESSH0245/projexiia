@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ClipboardCheck, Users } from 'lucide-react';
 import { EmptyState } from '@/components/dashboard/EmptyState';
-import { AnalyticsOverview } from '@/components/dashboard/AnalyticsOverview';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { ProjectForm } from '@/components/projects/ProjectForm';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,11 +16,21 @@ import { Project, Analytics } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const defaultAnalytics: Analytics = {
+  pendingProjects: 0,
+  inReviewProjects: 0,
+  changesRequestedProjects: 0,
+  approvedProjects: 0,
+  completedTasks: 0,
+  pendingTasks: 0,
+  highPriorityTasks: 0
+};
+
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [projects, setProjects] = useState<Project[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [analytics, setAnalytics] = useState<Analytics>(defaultAnalytics);
   const [isLoading, setIsLoading] = useState(true);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
 
@@ -36,16 +45,16 @@ const StudentDashboard = () => {
         console.error('Error fetching projects:', projectsError);
         toast.error('Failed to load projects');
       } else {
-        setProjects(projects);
+        setProjects(projects || []);
       }
       
       // Fetch analytics
-      const { analytics, error: analyticsError } = await getStudentAnalytics();
+      const { analytics: fetchedAnalytics, error: analyticsError } = await getStudentAnalytics();
       
       if (analyticsError) {
         console.error('Error fetching analytics:', analyticsError);
       } else {
-        setAnalytics(analytics);
+        setAnalytics(fetchedAnalytics || defaultAnalytics);
       }
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
@@ -68,6 +77,9 @@ const StudentDashboard = () => {
   const handleCreateProject = () => {
     setIsProjectDialogOpen(true);
   };
+
+  // Calculate total projects
+  const totalProjects = projects.length;
 
   return (
     <Layout>
@@ -107,37 +119,83 @@ const StudentDashboard = () => {
               </div>
             ) : (
               <>
-                {analytics && <AnalyticsOverview analytics={analytics} role="student" />}
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="col-span-full">
-                    <CardHeader>
-                      <CardTitle>Your Projects</CardTitle>
-                      <CardDescription>
-                        Recent projects you're working on
-                      </CardDescription>
+                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {projects.length === 0 ? (
-                        <EmptyState
-                          title="No projects yet"
-                          description="Create your first project to get started"
-                          icon={ClipboardCheck}
-                          action={{
-                            label: "Create Project",
-                            onClick: handleCreateProject
-                          }}
-                        />
-                      ) : (
-                        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                          {projects.slice(0, 6).map((project) => (
-                            <ProjectCard key={project.id} project={project} />
-                          ))}
-                        </div>
-                      )}
+                      <div className="text-2xl font-bold">{totalProjects}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Across all statuses
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics.completedTasks || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Out of {(analytics.completedTasks || 0) + (analytics.pendingTasks || 0)} total tasks
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">High Priority Tasks</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics.highPriorityTasks || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Requiring immediate attention
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Approved Projects</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics.approvedProjects || 0}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Successfully completed projects
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
+                
+                <Card className="col-span-full">
+                  <CardHeader>
+                    <CardTitle>Your Projects</CardTitle>
+                    <CardDescription>
+                      Recent projects you're working on
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {projects.length === 0 ? (
+                      <EmptyState
+                        title="No projects yet"
+                        description="Create your first project to get started"
+                        icon={ClipboardCheck}
+                        action={{
+                          label: "Create Project",
+                          onClick: handleCreateProject
+                        }}
+                      />
+                    ) : (
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                        {projects.slice(0, 6).map((project) => (
+                          <ProjectCard key={project.id} project={project} />
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </>
             )}
           </TabsContent>

@@ -8,6 +8,7 @@ import { Feedback } from '@/types';
 import { getProjectFeedback } from '@/lib/supabase';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface FeedbackListProps {
   projectId: string;
@@ -21,13 +22,14 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   const fetchFeedback = async () => {
     try {
       setIsLoading(true);
-      const { feedback, error } = await getProjectFeedback(projectId);
+      setError(null); // Reset error state when fetching
+      const { feedback, error: apiError } = await getProjectFeedback(projectId);
       
-      if (error) {
-        throw error;
+      if (apiError) {
+        throw apiError;
       }
       
-      setFeedbackItems(feedback as Feedback[]);
+      setFeedbackItems(Array.isArray(feedback) ? feedback : []);
     } catch (err: any) {
       console.error('Error fetching feedback:', err);
       setError(err.message || 'Failed to load feedback');
@@ -42,6 +44,8 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   }, [projectId]);
 
   const getInitials = (name: string) => {
+    if (!name) return 'F'; // Default fallback
+    
     return name
       .split(' ')
       .map(part => part[0])
@@ -68,7 +72,7 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     );
   }
 
-  if (feedbackItems.length === 0) {
+  if (!feedbackItems || feedbackItems.length === 0) {
     return (
       <EmptyState
         icon={MessageSquare}
@@ -90,7 +94,7 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
               <Avatar>
                 <AvatarImage src={item.faculty?.avatar_url || ''} alt="Faculty" />
                 <AvatarFallback>
-                  {item.faculty?.name ? getInitials(item.faculty.name) : 'F'}
+                  {getInitials(item.faculty?.name || 'F')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -109,6 +113,3 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     </Card>
   );
 };
-
-// Add missing Button import
-import { Button } from '@/components/ui/button';

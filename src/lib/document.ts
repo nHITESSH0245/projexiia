@@ -23,10 +23,31 @@ export const uploadDocument = async (
       throw new Error('You must be logged in to upload documents');
     }
 
+    console.log('Uploading document for project:', projectId);
+    console.log('File details:', file.name, file.type, file.size);
+
     // Create a unique file path
     const filePath = generateFilePath(user.id, projectId, file.name);
     
+    // Check if storage bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const projectDocumentsBucket = buckets?.find(b => b.name === 'project_documents');
+    
+    if (!projectDocumentsBucket) {
+      console.log('Creating project_documents bucket');
+      // Create the bucket if it doesn't exist
+      const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
+        public: false
+      });
+      
+      if (bucketError) {
+        console.error('Error creating bucket:', bucketError);
+        throw new Error('Failed to create storage bucket: ' + bucketError.message);
+      }
+    }
+    
     // Upload file to storage
+    console.log('Uploading file to path:', filePath);
     const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(filePath, file, {
@@ -36,8 +57,11 @@ export const uploadDocument = async (
       });
 
     if (error) {
+      console.error('Storage upload error:', error);
       throw error;
     }
+
+    console.log('File uploaded successfully:', data);
 
     // Create document record in database
     const { data: document, error: dbError } = await supabase
@@ -56,10 +80,12 @@ export const uploadDocument = async (
 
     if (dbError) {
       // If database insert fails, try to delete the uploaded file
+      console.error('Database insert error:', dbError);
       await supabase.storage.from('project_documents').remove([data.path]);
       throw dbError;
     }
 
+    console.log('Document record created:', document);
     return { document: document as Document, error: null };
   } catch (error) {
     console.error('Error uploading document:', error);

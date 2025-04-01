@@ -1,32 +1,26 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole, Feedback, ProjectMilestone } from "@/types";
 import { toast } from "sonner";
 import { createNotification } from "./notification";
 
-// Helper function to generate a unique file path
 const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
   const timestamp = new Date().getTime();
   const cleanFileName = fileName.replace(/[^a-zA-Z0-9.]/g, '_');
   return `${userId}/${projectId}/${timestamp}_${cleanFileName}`;
 };
 
-// Upload a document to storage and record in database
 export const uploadDocument = async (
   projectId: string,
   file: File
 ): Promise<{ document: Document | null; error: Error | null }> => {
   try {
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('You must be logged in to upload documents');
     }
 
-    // Create a unique file path
     const filePath = generateFilePath(user.id, projectId, file.name);
     
-    // Upload file to storage
     const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(filePath, file, {
@@ -39,7 +33,6 @@ export const uploadDocument = async (
       throw error;
     }
 
-    // Create document record in database
     const { data: document, error: dbError } = await supabase
       .from('documents')
       .insert({
@@ -55,7 +48,6 @@ export const uploadDocument = async (
       .single();
 
     if (dbError) {
-      // If database insert fails, try to delete the uploaded file
       await supabase.storage.from('project_documents').remove([data.path]);
       throw dbError;
     }
@@ -67,7 +59,6 @@ export const uploadDocument = async (
   }
 };
 
-// Get all documents for a project
 export const getProjectDocuments = async (projectId: string): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
     const { data, error } = await supabase
@@ -87,7 +78,6 @@ export const getProjectDocuments = async (projectId: string): Promise<{ document
   }
 };
 
-// Get all documents for faculty review
 export const getAllDocumentsForReview = async (): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
     const { data, error } = await supabase
@@ -105,7 +95,6 @@ export const getAllDocumentsForReview = async (): Promise<{ documents: Document[
       throw error;
     }
 
-    // Transform the data to match our Document interface
     const documents = data.map(doc => {
       const projectData = doc.projects as any;
       const studentData = projectData?.profiles || {};
@@ -140,7 +129,6 @@ export const getAllDocumentsForReview = async (): Promise<{ documents: Document[
   }
 };
 
-// Get public URL for a document
 export const getDocumentUrl = async (filePath: string): Promise<string> => {
   try {
     const { data } = await supabase.storage
@@ -154,10 +142,8 @@ export const getDocumentUrl = async (filePath: string): Promise<string> => {
   }
 };
 
-// Delete a document
 export const deleteDocument = async (documentId: string): Promise<{ success: boolean; error: Error | null }> => {
   try {
-    // First, get the document to find its file path
     const { data: document, error: fetchError } = await supabase
       .from('documents')
       .select('*')
@@ -168,7 +154,6 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
       throw fetchError;
     }
 
-    // Delete the file from storage
     const { error: storageError } = await supabase.storage
       .from('project_documents')
       .remove([document.file_path]);
@@ -177,7 +162,6 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
       throw storageError;
     }
 
-    // Delete the database record
     const { error: dbError } = await supabase
       .from('documents')
       .delete()
@@ -194,14 +178,12 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
   }
 };
 
-// Review a document (faculty only)
 export const reviewDocument = async (
   documentId: string,
   status: DocumentStatus,
   remarks?: string
 ): Promise<{ success: boolean; error: Error | null }> => {
   try {
-    // Update document status and remarks
     const { data: document, error: updateError } = await supabase
       .from('documents')
       .update({
@@ -221,7 +203,6 @@ export const reviewDocument = async (
       throw updateError;
     }
 
-    // Create notification for the student
     const projectData = document.projects as any;
     if (projectData && projectData.student_id) {
       const statusText = status === 'approved' ? 'approved' : 'rejected';
@@ -244,7 +225,6 @@ export const reviewDocument = async (
   }
 };
 
-// Project Milestones functions
 export const getProjectMilestones = async (projectId: string) => {
   try {
     const { data, error } = await supabase
@@ -403,7 +383,6 @@ export const updateMilestoneDocument = async (milestoneId: string, documentId: s
   }
 };
 
-// Task functions
 export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   try {
     const { data: task, error } = await supabase
@@ -424,7 +403,6 @@ export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   }
 };
 
-// Project functions
 export const updateProjectStatus = async (projectId: string, status: ProjectStatus) => {
   try {
     const { data: project, error } = await supabase
@@ -445,7 +423,6 @@ export const updateProjectStatus = async (projectId: string, status: ProjectStat
   }
 };
 
-// Team functions
 export const getTeamMembers = async (teamId: string) => {
   try {
     const { data: members, error } = await supabase
@@ -472,7 +449,6 @@ export const getTeamMembers = async (teamId: string) => {
   }
 };
 
-// Auth functions
 export const signIn = async (email: string, password: string) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -538,7 +514,6 @@ export const getCurrentUser = async () => {
       return { user: null, profile: null, error: null };
     }
     
-    // Get user profile
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
@@ -605,7 +580,6 @@ export const getStudentProjects = async () => {
       throw error;
     }
     
-    // Convert string status to ProjectStatus enum
     const typedProjects = data.map(project => ({
       ...project,
       status: project.status as ProjectStatus
@@ -632,7 +606,6 @@ export const getAllProjects = async () => {
       throw error;
     }
     
-    // Convert string status to ProjectStatus enum and format profiles
     const typedProjects = data.map(project => ({
       ...project,
       status: project.status as ProjectStatus,
@@ -654,13 +627,32 @@ export const getStudentAnalytics = async () => {
       throw new Error('You must be logged in to view analytics');
     }
     
-    // You would implement analytics gathering logic here
-    // This is a placeholder
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('student_id', user.id);
+      
+    if (projectsError) {
+      throw projectsError;
+    }
+    
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('*')
+      .in('project_id', projects.map(p => p.id) || []);
+      
+    if (tasksError && projects.length > 0) {
+      throw tasksError;
+    }
+    
     const analytics = {
-      totalProjects: 0,
-      completedProjects: 0,
-      pendingTasks: 0,
-      upcomingDeadlines: 0
+      pendingProjects: projects?.filter(p => p.status === 'pending').length || 0,
+      inReviewProjects: projects?.filter(p => p.status === 'in_review').length || 0,
+      changesRequestedProjects: projects?.filter(p => p.status === 'changes_requested').length || 0,
+      approvedProjects: projects?.filter(p => p.status === 'approved').length || 0,
+      completedTasks: tasks?.filter(t => t.status === 'completed').length || 0,
+      pendingTasks: tasks?.filter(t => t.status === 'pending').length || 0,
+      highPriorityTasks: tasks?.filter(t => t.priority === 'high').length || 0
     };
     
     return { analytics, error: null };
@@ -729,7 +721,6 @@ export const provideFeedback = async (
       throw error;
     }
     
-    // Notify the student about the feedback
     const { data: project } = await supabase
       .from('projects')
       .select('student_id')
@@ -773,34 +764,22 @@ export const getProjectFeedback = async (projectId: string) => {
       throw error;
     }
     
-    // Transform the data to match the expected format
     const formattedFeedback = data.map(item => {
       const facultyData = item.faculty || {} as any;
-      let nameData = null;
-      let emailData = null;
-      let avatarData = null;
       
-      if (facultyData.name && Array.isArray(facultyData.name) && facultyData.name.length > 0) {
-        nameData = facultyData.name[0];
-      }
-      
-      if (facultyData.email && Array.isArray(facultyData.email) && facultyData.email.length > 0) {
-        emailData = facultyData.email[0];
-      }
-      
-      if (facultyData.avatar_url && Array.isArray(facultyData.avatar_url) && facultyData.avatar_url.length > 0) {
-        avatarData = facultyData.avatar_url[0];
-      }
+      const nameData = Array.isArray(facultyData.name) && facultyData.name.length > 0 ? facultyData.name[0] : null;
+      const emailData = Array.isArray(facultyData.email) && facultyData.email.length > 0 ? facultyData.email[0] : null;
+      const avatarData = Array.isArray(facultyData.avatar_url) && facultyData.avatar_url.length > 0 ? facultyData.avatar_url[0] : null;
       
       return {
         ...item,
         faculty: {
           id: facultyData.id || '',
-          name: nameData && nameData.name ? nameData.name : 'Faculty',
-          email: emailData && emailData.email ? emailData.email : '',
-          avatar_url: avatarData && avatarData.avatar_url ? avatarData.avatar_url : null
+          name: nameData && typeof nameData === 'object' && 'name' in nameData ? nameData.name : 'Faculty',
+          email: emailData && typeof emailData === 'object' && 'email' in emailData ? emailData.email : '',
+          avatar_url: avatarData && typeof avatarData === 'object' && 'avatar_url' in avatarData ? avatarData.avatar_url : null
         }
-      } as Feedback;
+      };
     });
     
     return { feedback: formattedFeedback, error: null };
