@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import {
   deleteProjectMilestone,
   updateMilestoneDocument
 } from '@/lib/supabase';
+import { uploadDocument } from '@/lib/document'; // Add this import
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 

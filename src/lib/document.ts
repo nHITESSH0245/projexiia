@@ -38,7 +38,8 @@ export const uploadDocument = async (
       // Create the bucket if it doesn't exist
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
-        fileSizeLimit: 50 * 1024 * 1024 // 50MB limit
+        fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
+        allowedMimeTypes: null // Fix: Changed from 'null' string to null
       });
       
       if (bucketError) {
