@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Document, DocumentStatus, User, UserRole } from "@/types";
+import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole } from "@/types";
 import { toast } from "sonner";
 
 // Helper function to generate a unique file path
@@ -302,8 +302,17 @@ export const updateProjectMilestone = async (
   }
 ) => {
   try {
-    const processedUpdates = { ...updates };
-    if (updates.due_date) {
+    const processedUpdates: Record<string, any> = {};
+    
+    if (updates.title !== undefined) {
+      processedUpdates.title = updates.title;
+    }
+    
+    if (updates.description !== undefined) {
+      processedUpdates.description = updates.description;
+    }
+    
+    if (updates.due_date !== undefined) {
       processedUpdates.due_date = typeof updates.due_date === 'string' 
         ? updates.due_date 
         : updates.due_date.toISOString();
@@ -393,7 +402,7 @@ export const updateMilestoneDocument = async (milestoneId: string, documentId: s
 };
 
 // Task functions
-export const updateTaskStatus = async (taskId: string, status: string) => {
+export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   try {
     const { data: task, error } = await supabase
       .from('tasks')
@@ -414,7 +423,7 @@ export const updateTaskStatus = async (taskId: string, status: string) => {
 };
 
 // Project functions
-export const updateProjectStatus = async (projectId: string, status: string) => {
+export const updateProjectStatus = async (projectId: string, status: ProjectStatus) => {
   try {
     const { data: project, error } = await supabase
       .from('projects')
@@ -495,7 +504,7 @@ export const createNotification = async (
   }
 };
 
-// Add the missing functions for auth and other operations
+// Auth functions
 export const signIn = async (email: string, password: string) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -628,7 +637,13 @@ export const getStudentProjects = async () => {
       throw error;
     }
     
-    return { projects: data, error: null };
+    // Convert string status to ProjectStatus enum
+    const typedProjects = data.map(project => ({
+      ...project,
+      status: project.status as ProjectStatus
+    })) as Project[];
+    
+    return { projects: typedProjects, error: null };
   } catch (error: any) {
     console.error('Get student projects error:', error);
     return { projects: [], error };
@@ -649,7 +664,14 @@ export const getAllProjects = async () => {
       throw error;
     }
     
-    return { projects: data, error: null };
+    // Convert string status to ProjectStatus enum and format profiles
+    const typedProjects = data.map(project => ({
+      ...project,
+      status: project.status as ProjectStatus,
+      profiles: project.profiles as any
+    })) as Project[];
+    
+    return { projects: typedProjects, error: null };
   } catch (error: any) {
     console.error('Get all projects error:', error);
     return { projects: [], error };
@@ -784,15 +806,22 @@ export const getProjectFeedback = async (projectId: string) => {
     }
     
     // Transform the data to match the expected format
-    const formattedFeedback = data.map(item => ({
-      ...item,
-      faculty: {
-        id: item.faculty?.id,
-        name: item.faculty?.name?.[0]?.name || 'Faculty',
-        email: item.faculty?.email?.[0]?.email || '',
-        avatar_url: item.faculty?.avatar_url?.[0]?.avatar_url || null
-      }
-    }));
+    const formattedFeedback = data.map(item => {
+      const facultyData = item.faculty || {};
+      const nameData = facultyData.name && facultyData.name.length > 0 ? facultyData.name[0] : null;
+      const emailData = facultyData.email && facultyData.email.length > 0 ? facultyData.email[0] : null;
+      const avatarData = facultyData.avatar_url && facultyData.avatar_url.length > 0 ? facultyData.avatar_url[0] : null;
+      
+      return {
+        ...item,
+        faculty: {
+          id: facultyData.id || '',
+          name: nameData ? nameData.name : 'Faculty',
+          email: emailData ? emailData.email : '',
+          avatar_url: avatarData ? avatarData.avatar_url : null
+        }
+      };
+    });
     
     return { feedback: formattedFeedback, error: null };
   } catch (error: any) {
