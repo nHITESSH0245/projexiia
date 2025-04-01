@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Feedback } from '@/types';
 import { getProjectFeedback } from '@/lib/supabase';
 import { EmptyState } from '@/components/dashboard/EmptyState';
+import { toast } from 'sonner';
 
 interface FeedbackListProps {
   projectId: string;
@@ -19,6 +20,7 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
 
   const fetchFeedback = async () => {
     try {
+      setIsLoading(true);
       const { feedback, error } = await getProjectFeedback(projectId);
       
       if (error) {
@@ -29,6 +31,7 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     } catch (err: any) {
       console.error('Error fetching feedback:', err);
       setError(err.message || 'Failed to load feedback');
+      toast.error('Failed to load feedback');
     } finally {
       setIsLoading(false);
     }
@@ -37,6 +40,14 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   useEffect(() => {
     fetchFeedback();
   }, [projectId]);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
+  };
 
   if (isLoading) {
     return (
@@ -50,6 +61,9 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     return (
       <div className="text-center py-4">
         <p className="text-destructive">{error}</p>
+        <Button onClick={fetchFeedback} variant="outline" className="mt-2">
+          Retry
+        </Button>
       </div>
     );
   }
@@ -75,7 +89,9 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
             <div className="flex items-start gap-4">
               <Avatar>
                 <AvatarImage src={item.faculty?.avatar_url || ''} alt="Faculty" />
-                <AvatarFallback>{item.faculty?.name?.[0] || 'F'}</AvatarFallback>
+                <AvatarFallback>
+                  {item.faculty?.name ? getInitials(item.faculty.name) : 'F'}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex justify-between">
@@ -93,3 +109,6 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     </Card>
   );
 };
+
+// Add missing Button import
+import { Button } from '@/components/ui/button';

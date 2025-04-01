@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole } from "@/types";
+import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole, Feedback, ProjectMilestone } from "@/types";
 import { toast } from "sonner";
 import { createNotification } from "./notification";
 
@@ -256,7 +257,7 @@ export const getProjectMilestones = async (projectId: string) => {
       throw error;
     }
     
-    return { milestones: data, error: null };
+    return { milestones: data as ProjectMilestone[], error: null };
   } catch (error: any) {
     console.error('Error fetching project milestones:', error);
     return { milestones: [], error };
@@ -287,7 +288,7 @@ export const createProjectMilestone = async (
       throw error;
     }
     
-    return { milestone: data, error: null };
+    return { milestone: data as ProjectMilestone, error: null };
   } catch (error: any) {
     console.error('Error creating project milestone:', error);
     return { milestone: null, error };
@@ -330,7 +331,7 @@ export const updateProjectMilestone = async (
       throw error;
     }
     
-    return { milestone: data, error: null };
+    return { milestone: data as ProjectMilestone, error: null };
   } catch (error: any) {
     console.error('Error updating project milestone:', error);
     return { milestone: null, error };
@@ -357,7 +358,7 @@ export const markMilestoneAsCompleted = async (
       throw error;
     }
     
-    return { milestone: data, error: null };
+    return { milestone: data as ProjectMilestone, error: null };
   } catch (error: any) {
     console.error('Error marking milestone as completed:', error);
     return { milestone: null, error };
@@ -395,7 +396,7 @@ export const updateMilestoneDocument = async (milestoneId: string, documentId: s
       throw error;
     }
     
-    return { milestone: data, error: null };
+    return { milestone: data as ProjectMilestone, error: null };
   } catch (error: any) {
     console.error('Error updating milestone document:', error);
     return { milestone: null, error };
@@ -579,7 +580,7 @@ export const createProject = async (title: string, description: string, teamId?:
       throw error;
     }
     
-    return { project: data, error: null };
+    return { project: data as Project, error: null };
   } catch (error: any) {
     console.error('Create project error:', error);
     return { project: null, error };
@@ -745,7 +746,7 @@ export const provideFeedback = async (
       );
     }
     
-    return { feedback: data, error: null };
+    return { feedback: data as Feedback, error: null };
   } catch (error: any) {
     console.error('Provide feedback error:', error);
     return { feedback: null, error };
@@ -799,7 +800,7 @@ export const getProjectFeedback = async (projectId: string) => {
           email: emailData && emailData.email ? emailData.email : '',
           avatar_url: avatarData && avatarData.avatar_url ? avatarData.avatar_url : null
         }
-      };
+      } as Feedback;
     });
     
     return { feedback: formattedFeedback, error: null };

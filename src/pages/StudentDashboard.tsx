@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProjects, getStudentAnalytics } from '@/lib/supabase';
 import { Project, Analytics } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -33,6 +34,7 @@ const StudentDashboard = () => {
       
       if (projectsError) {
         console.error('Error fetching projects:', projectsError);
+        toast.error('Failed to load projects');
       } else {
         setProjects(projects);
       }
@@ -47,6 +49,7 @@ const StudentDashboard = () => {
       }
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +62,7 @@ const StudentDashboard = () => {
   const handleProjectCreated = () => {
     setIsProjectDialogOpen(false);
     fetchData();
+    toast.success('Project created successfully');
   };
 
   const handleCreateProject = () => {
@@ -69,7 +73,7 @@ const StudentDashboard = () => {
     <Layout>
       <div className="container py-6 max-w-7xl mx-auto px-4 md:px-6">
         <DashboardHeader
-          title={`Welcome, ${user?.name}!`}
+          title={`Welcome, ${user?.name || 'Student'}!`}
           description="Manage your projects and track your progress"
           className="mb-6"
         >

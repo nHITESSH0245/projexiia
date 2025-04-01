@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -11,6 +12,7 @@ import { ProjectCard } from '@/components/projects/ProjectCard';
 import { getAllProjects } from '@/lib/supabase';
 import { Project } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -31,21 +33,27 @@ const FacultyDashboard = () => {
   
   const fetchData = async () => {
     setIsLoading(true);
-    const { projects, error } = await getAllProjects();
-    
-    if (error) {
-      console.error('Error fetching projects:', error);
-    } else {
-      setProjects(projects);
+    try {
+      const { projects, error } = await getAllProjects();
       
-      // Filter projects that need review
-      const pending = projects.filter(
-        project => project.status === 'in_review' || project.status === 'pending'
-      );
-      setReviewRequests(pending);
+      if (error) {
+        console.error('Error fetching projects:', error);
+        toast.error('Failed to load projects');
+      } else {
+        setProjects(projects);
+        
+        // Filter projects that need review
+        const pending = projects.filter(
+          project => project.status === 'in_review' || project.status === 'pending'
+        );
+        setReviewRequests(pending);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
   
   useEffect(() => {
@@ -60,7 +68,7 @@ const FacultyDashboard = () => {
     <Layout>
       <div className="container py-6 max-w-7xl mx-auto px-4 md:px-6">
         <DashboardHeader
-          title={`Welcome, ${user?.name}!`}
+          title={`Welcome, ${user?.name || 'Faculty'}!`}
           description="Monitor student projects and provide feedback"
           className="mb-6"
         >
@@ -373,7 +381,7 @@ const FacultyDashboard = () => {
                           <TableCell>{student.email}</TableCell>
                           <TableCell>{student.projectCount}</TableCell>
                           <TableCell className="text-right">
-                            <Button size="sm" variant="outline" disabled>
+                            <Button size="sm" variant="outline">
                               View Projects
                             </Button>
                           </TableCell>
