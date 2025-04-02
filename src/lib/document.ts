@@ -45,12 +45,10 @@ export const uploadDocument = async (
     if (!projectDocumentsBucket) {
       console.log('Creating project_documents bucket');
       // Create the bucket if it doesn't exist
-      const allowedTypes: string[] = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
         fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: allowedTypes
       });
       
       if (bucketError) {
