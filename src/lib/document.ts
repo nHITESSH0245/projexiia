@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus } from "@/types";
 import { toast } from "sonner";
@@ -39,7 +38,7 @@ export const uploadDocument = async (
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
         fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: [] as string[] // Explicitly type this as a string array
+        allowedMimeTypes: [] // Empty array with explicit type
       });
       
       if (bucketError) {
