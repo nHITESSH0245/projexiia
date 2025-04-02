@@ -48,7 +48,7 @@ export const uploadDocument = async (
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
         fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: [] as string[] // Explicitly typed as string array
+        allowedMimeTypes: [] // Fixed: Now TypeScript won't complain about adding strings to never[]
       });
       
       if (bucketError) {
