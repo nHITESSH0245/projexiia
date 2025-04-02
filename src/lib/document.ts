@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus } from "@/types";
 import { toast } from "sonner";
@@ -48,7 +47,7 @@ export const uploadDocument = async (
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
         fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: [] // Fixed: Now TypeScript won't complain about adding strings to never[]
+        allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png', 'application/doc', 'application/docx'] // Explicitly define allowed MIME types
       });
       
       if (bucketError) {
