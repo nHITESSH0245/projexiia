@@ -9,6 +9,9 @@ export const uploadDocumentToStorage = async (
   file: File
 ): Promise<{ path: string; error: Error | null }> => {
   try {
+    console.log('Attempting to upload file to path:', filePath);
+    console.log('File details for upload:', file.name, file.type, file.size);
+    
     const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(filePath, file, {
@@ -38,6 +41,8 @@ export const createDocumentRecord = async (
   userId: string
 ): Promise<{ document: Document | null; error: Error | null }> => {
   try {
+    console.log('Creating document record for file:', file.name);
+    
     const { data: document, error } = await supabase
       .from('documents')
       .insert({
@@ -70,6 +75,8 @@ export const getProjectDocumentRecords = async (
   projectId: string
 ): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
+    console.log('Fetching documents for project:', projectId);
+    
     const { data, error } = await supabase
       .from('documents')
       .select('*')
@@ -80,6 +87,7 @@ export const getProjectDocumentRecords = async (
       throw error;
     }
 
+    console.log(`Found ${data.length} documents for project:`, projectId);
     return { documents: data as Document[], error: null };
   } catch (error) {
     console.error('Error fetching project documents:', error);
@@ -143,6 +151,8 @@ export const getDocumentsWithProjectInfo = async (): Promise<{ documents: Docume
 // Get public URL for a document
 export const getPublicDocumentUrl = async (filePath: string): Promise<string> => {
   try {
+    console.log('Getting public URL for file:', filePath);
+    
     const { data } = await supabase.storage
       .from('project_documents')
       .getPublicUrl(filePath);
