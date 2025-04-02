@@ -1,7 +1,17 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Document, DocumentStatus } from "@/types";
 import { toast } from "sonner";
 import { createNotification } from "./notification";
+import { 
+  uploadDocumentToStorage,
+  createDocumentRecord,
+  getProjectDocumentRecords,
+  getDocumentsWithProjectInfo,
+  getPublicDocumentUrl,
+  removeDocumentAndFile,
+  updateDocumentStatusAndNotify
+} from "./documentUtils";
 
 // Helper function to generate a unique file path
 const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
@@ -38,7 +48,7 @@ export const uploadDocument = async (
       const { data: newBucket, error: bucketError } = await supabase.storage.createBucket('project_documents', {
         public: false,
         fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
-        allowedMimeTypes: [] // Empty array with explicit type
+        allowedMimeTypes: [] as string[] // Explicitly typed as string array
       });
       
       if (bucketError) {
@@ -60,46 +70,26 @@ export const uploadDocument = async (
     }
     
     // Upload file to storage
-    console.log('Uploading file to path:', filePath);
-    const { data, error } = await supabase.storage
-      .from('project_documents')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-      });
-
-    if (error) {
-      console.error('Storage upload error:', error);
-      throw error;
+    const uploadResult = await uploadDocumentToStorage(filePath, file);
+    if (uploadResult.error) {
+      throw uploadResult.error;
     }
-
-    console.log('File uploaded successfully:', data);
 
     // Create document record in database
-    const { data: document, error: dbError } = await supabase
-      .from('documents')
-      .insert({
-        project_id: projectId,
-        name: file.name,
-        file_path: data.path,
-        file_type: file.type,
-        file_size: file.size,
-        uploaded_by: user.id,
-        status: 'pending'
-      })
-      .select()
-      .single();
+    const documentResult = await createDocumentRecord(
+      projectId,
+      file,
+      uploadResult.path,
+      user.id
+    );
 
-    if (dbError) {
+    if (documentResult.error) {
       // If database insert fails, try to delete the uploaded file
-      console.error('Database insert error:', dbError);
-      await supabase.storage.from('project_documents').remove([data.path]);
-      throw dbError;
+      await supabase.storage.from('project_documents').remove([uploadResult.path]);
+      throw documentResult.error;
     }
 
-    console.log('Document record created:', document);
-    return { document: document as Document, error: null };
+    return { document: documentResult.document, error: null };
   } catch (error) {
     console.error('Error uploading document:', error);
     return { document: null, error: error as Error };
@@ -108,129 +98,22 @@ export const uploadDocument = async (
 
 // Get all documents for a project
 export const getProjectDocuments = async (projectId: string): Promise<{ documents: Document[]; error: Error | null }> => {
-  try {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    return { documents: data as Document[], error: null };
-  } catch (error) {
-    console.error('Error fetching project documents:', error);
-    return { documents: [], error: error as Error };
-  }
+  return await getProjectDocumentRecords(projectId);
 };
 
 // Get all documents for faculty review
 export const getAllDocumentsForReview = async (): Promise<{ documents: Document[]; error: Error | null }> => {
-  try {
-    const { data, error } = await supabase
-      .from('documents')
-      .select(`
-        *,
-        projects:project_id (
-          *,
-          profiles:student_id ( name, email, avatar_url )
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    // Transform the data to match our Document interface
-    const documents = data.map(doc => {
-      const projectData = doc.projects as any;
-      const studentData = projectData?.profiles || {};
-      
-      return {
-        id: doc.id,
-        project_id: doc.project_id,
-        name: doc.name,
-        file_path: doc.file_path,
-        file_type: doc.file_type,
-        file_size: doc.file_size,
-        uploaded_by: doc.uploaded_by,
-        status: doc.status as DocumentStatus,
-        faculty_remarks: doc.faculty_remarks,
-        created_at: doc.created_at,
-        updated_at: doc.updated_at,
-        project: {
-          title: projectData?.title || 'Unknown Project',
-          student: {
-            name: studentData?.name || 'Unknown Student',
-            email: studentData?.email || '',
-            avatar_url: studentData?.avatar_url
-          }
-        }
-      } as Document;
-    });
-
-    return { documents, error: null };
-  } catch (error) {
-    console.error('Error fetching documents for review:', error);
-    return { documents: [], error: error as Error };
-  }
+  return await getDocumentsWithProjectInfo();
 };
 
 // Get public URL for a document
 export const getDocumentUrl = async (filePath: string): Promise<string> => {
-  try {
-    const { data } = await supabase.storage
-      .from('project_documents')
-      .getPublicUrl(filePath);
-    
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error getting document URL:', error);
-    return '';
-  }
+  return await getPublicDocumentUrl(filePath);
 };
 
 // Delete a document
 export const deleteDocument = async (documentId: string): Promise<{ success: boolean; error: Error | null }> => {
-  try {
-    // First, get the document to find its file path
-    const { data: document, error: fetchError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', documentId)
-      .single();
-
-    if (fetchError) {
-      throw fetchError;
-    }
-
-    // Delete the file from storage
-    const { error: storageError } = await supabase.storage
-      .from('project_documents')
-      .remove([document.file_path]);
-
-    if (storageError) {
-      throw storageError;
-    }
-
-    // Delete the database record
-    const { error: dbError } = await supabase
-      .from('documents')
-      .delete()
-      .eq('id', documentId);
-
-    if (dbError) {
-      throw dbError;
-    }
-
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Error deleting document:', error);
-    return { success: false, error: error as Error };
-  }
+  return await removeDocumentAndFile(documentId);
 };
 
 // Review a document (faculty only)
@@ -239,46 +122,5 @@ export const reviewDocument = async (
   status: DocumentStatus,
   remarks?: string
 ): Promise<{ success: boolean; error: Error | null }> => {
-  try {
-    // Update document status and remarks
-    const { data: document, error: updateError } = await supabase
-      .from('documents')
-      .update({
-        status,
-        faculty_remarks: remarks || null
-      })
-      .eq('id', documentId)
-      .select(`
-        *,
-        projects:project_id (
-          *
-        )
-      `)
-      .single();
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Create notification for the student
-    const projectData = document.projects as any;
-    if (projectData && projectData.student_id) {
-      const statusText = status === 'approved' ? 'approved' : 'rejected';
-      const notificationTitle = `Document ${statusText}`;
-      const notificationMessage = `Your document "${document.name}" has been ${statusText} by faculty.`;
-
-      await createNotification(
-        projectData.student_id,
-        notificationTitle,
-        notificationMessage,
-        'document_feedback',
-        document.project_id
-      );
-    }
-
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Error reviewing document:', error);
-    return { success: false, error: error as Error };
-  }
+  return await updateDocumentStatusAndNotify(documentId, status, remarks);
 };
