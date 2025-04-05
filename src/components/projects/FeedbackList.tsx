@@ -7,8 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Feedback } from '@/types';
 import { getProjectFeedback } from '@/lib/supabase';
 import { EmptyState } from '@/components/dashboard/EmptyState';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 
 interface FeedbackListProps {
   projectId: string;
@@ -20,42 +18,25 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchFeedback = async () => {
-    if (!projectId) return;
-    
     try {
-      setIsLoading(true);
-      setError(null); // Reset error state when fetching
-      const { feedback, error: apiError } = await getProjectFeedback(projectId);
+      const { feedback, error } = await getProjectFeedback(projectId);
       
-      if (apiError) {
-        throw apiError;
+      if (error) {
+        throw error;
       }
       
-      setFeedbackItems(Array.isArray(feedback) ? feedback : []);
+      setFeedbackItems(feedback as Feedback[]);
     } catch (err: any) {
       console.error('Error fetching feedback:', err);
       setError(err.message || 'Failed to load feedback');
-      toast.error('Failed to load feedback');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (projectId) {
-      fetchFeedback();
-    }
+    fetchFeedback();
   }, [projectId]);
-
-  const getInitials = (name: string) => {
-    if (!name) return 'F'; // Default fallback
-    
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
-  };
 
   if (isLoading) {
     return (
@@ -69,14 +50,11 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
     return (
       <div className="text-center py-4">
         <p className="text-destructive">{error}</p>
-        <Button onClick={fetchFeedback} variant="outline" className="mt-2">
-          Retry
-        </Button>
       </div>
     );
   }
 
-  if (!feedbackItems || feedbackItems.length === 0) {
+  if (feedbackItems.length === 0) {
     return (
       <EmptyState
         icon={MessageSquare}
@@ -97,9 +75,7 @@ export const FeedbackList = ({ projectId }: FeedbackListProps) => {
             <div className="flex items-start gap-4">
               <Avatar>
                 <AvatarImage src={item.faculty?.avatar_url || ''} alt="Faculty" />
-                <AvatarFallback>
-                  {getInitials(item.faculty?.name || 'F')}
-                </AvatarFallback>
+                <AvatarFallback>{item.faculty?.name?.[0] || 'F'}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex justify-between">

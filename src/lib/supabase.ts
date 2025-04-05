@@ -1,26 +1,31 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Document, DocumentStatus, Project, ProjectStatus, TaskStatus, User, UserRole, Feedback, ProjectMilestone } from "@/types";
+import { Document, DocumentStatus } from "@/types";
 import { toast } from "sonner";
 import { createNotification } from "./notification";
 
+// Helper function to generate a unique file path
 const generateFilePath = (userId: string, projectId: string, fileName: string): string => {
   const timestamp = new Date().getTime();
   const cleanFileName = fileName.replace(/[^a-zA-Z0-9.]/g, '_');
   return `${userId}/${projectId}/${timestamp}_${cleanFileName}`;
 };
 
+// Upload a document to storage and record in database
 export const uploadDocument = async (
   projectId: string,
   file: File
 ): Promise<{ document: Document | null; error: Error | null }> => {
   try {
+    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('You must be logged in to upload documents');
     }
 
+    // Create a unique file path
     const filePath = generateFilePath(user.id, projectId, file.name);
     
+    // Upload file to storage
     const { data, error } = await supabase.storage
       .from('project_documents')
       .upload(filePath, file, {
@@ -33,6 +38,7 @@ export const uploadDocument = async (
       throw error;
     }
 
+    // Create document record in database
     const { data: document, error: dbError } = await supabase
       .from('documents')
       .insert({
@@ -48,6 +54,7 @@ export const uploadDocument = async (
       .single();
 
     if (dbError) {
+      // If database insert fails, try to delete the uploaded file
       await supabase.storage.from('project_documents').remove([data.path]);
       throw dbError;
     }
@@ -59,6 +66,7 @@ export const uploadDocument = async (
   }
 };
 
+// Get all documents for a project
 export const getProjectDocuments = async (projectId: string): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
     const { data, error } = await supabase
@@ -78,6 +86,7 @@ export const getProjectDocuments = async (projectId: string): Promise<{ document
   }
 };
 
+// Get all documents for faculty review
 export const getAllDocumentsForReview = async (): Promise<{ documents: Document[]; error: Error | null }> => {
   try {
     const { data, error } = await supabase
@@ -95,6 +104,7 @@ export const getAllDocumentsForReview = async (): Promise<{ documents: Document[
       throw error;
     }
 
+    // Transform the data to match our Document interface
     const documents = data.map(doc => {
       const projectData = doc.projects as any;
       const studentData = projectData?.profiles || {};
@@ -129,6 +139,7 @@ export const getAllDocumentsForReview = async (): Promise<{ documents: Document[
   }
 };
 
+// Get public URL for a document
 export const getDocumentUrl = async (filePath: string): Promise<string> => {
   try {
     const { data } = await supabase.storage
@@ -142,8 +153,10 @@ export const getDocumentUrl = async (filePath: string): Promise<string> => {
   }
 };
 
+// Delete a document
 export const deleteDocument = async (documentId: string): Promise<{ success: boolean; error: Error | null }> => {
   try {
+    // First, get the document to find its file path
     const { data: document, error: fetchError } = await supabase
       .from('documents')
       .select('*')
@@ -154,6 +167,7 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
       throw fetchError;
     }
 
+    // Delete the file from storage
     const { error: storageError } = await supabase.storage
       .from('project_documents')
       .remove([document.file_path]);
@@ -162,6 +176,7 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
       throw storageError;
     }
 
+    // Delete the database record
     const { error: dbError } = await supabase
       .from('documents')
       .delete()
@@ -178,12 +193,14 @@ export const deleteDocument = async (documentId: string): Promise<{ success: boo
   }
 };
 
+// Review a document (faculty only)
 export const reviewDocument = async (
   documentId: string,
   status: DocumentStatus,
   remarks?: string
 ): Promise<{ success: boolean; error: Error | null }> => {
   try {
+    // Update document status and remarks
     const { data: document, error: updateError } = await supabase
       .from('documents')
       .update({
@@ -203,6 +220,7 @@ export const reviewDocument = async (
       throw updateError;
     }
 
+    // Create notification for the student
     const projectData = document.projects as any;
     if (projectData && projectData.student_id) {
       const statusText = status === 'approved' ? 'approved' : 'rejected';
@@ -225,6 +243,7 @@ export const reviewDocument = async (
   }
 };
 
+// Project Milestones functions
 export const getProjectMilestones = async (projectId: string) => {
   try {
     const { data, error } = await supabase
@@ -237,7 +256,7 @@ export const getProjectMilestones = async (projectId: string) => {
       throw error;
     }
     
-    return { milestones: data as ProjectMilestone[], error: null };
+    return { milestones: data, error: null };
   } catch (error: any) {
     console.error('Error fetching project milestones:', error);
     return { milestones: [], error };
@@ -248,18 +267,16 @@ export const createProjectMilestone = async (
   projectId: string,
   title: string,
   description: string | null,
-  dueDate: Date | string
+  dueDate: string
 ) => {
   try {
-    const dueDateStr = typeof dueDate === 'string' ? dueDate : dueDate.toISOString();
-    
     const { data, error } = await supabase
       .from('project_milestones')
       .insert({
         project_id: projectId,
         title,
         description,
-        due_date: dueDateStr
+        due_date: dueDate
       })
       .select()
       .single();
@@ -268,7 +285,7 @@ export const createProjectMilestone = async (
       throw error;
     }
     
-    return { milestone: data as ProjectMilestone, error: null };
+    return { milestone: data, error: null };
   } catch (error: any) {
     console.error('Error creating project milestone:', error);
     return { milestone: null, error };
@@ -280,29 +297,13 @@ export const updateProjectMilestone = async (
   updates: {
     title?: string;
     description?: string | null;
-    due_date?: Date | string;
+    due_date?: string;
   }
 ) => {
   try {
-    const processedUpdates: Record<string, any> = {};
-    
-    if (updates.title !== undefined) {
-      processedUpdates.title = updates.title;
-    }
-    
-    if (updates.description !== undefined) {
-      processedUpdates.description = updates.description;
-    }
-    
-    if (updates.due_date !== undefined) {
-      processedUpdates.due_date = typeof updates.due_date === 'string' 
-        ? updates.due_date 
-        : updates.due_date.toISOString();
-    }
-    
     const { data, error } = await supabase
       .from('project_milestones')
-      .update(processedUpdates)
+      .update(updates)
       .eq('id', milestoneId)
       .select()
       .single();
@@ -311,7 +312,7 @@ export const updateProjectMilestone = async (
       throw error;
     }
     
-    return { milestone: data as ProjectMilestone, error: null };
+    return { milestone: data, error: null };
   } catch (error: any) {
     console.error('Error updating project milestone:', error);
     return { milestone: null, error };
@@ -338,7 +339,7 @@ export const markMilestoneAsCompleted = async (
       throw error;
     }
     
-    return { milestone: data as ProjectMilestone, error: null };
+    return { milestone: data, error: null };
   } catch (error: any) {
     console.error('Error marking milestone as completed:', error);
     return { milestone: null, error };
@@ -376,14 +377,15 @@ export const updateMilestoneDocument = async (milestoneId: string, documentId: s
       throw error;
     }
     
-    return { milestone: data as ProjectMilestone, error: null };
+    return { milestone: data, error: null };
   } catch (error: any) {
     console.error('Error updating milestone document:', error);
     return { milestone: null, error };
   }
 };
 
-export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
+// Task functions
+export const updateTaskStatus = async (taskId: string, status: string) => {
   try {
     const { data: task, error } = await supabase
       .from('tasks')
@@ -403,7 +405,8 @@ export const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
   }
 };
 
-export const updateProjectStatus = async (projectId: string, status: ProjectStatus) => {
+// Project functions
+export const updateProjectStatus = async (projectId: string, status: string) => {
   try {
     const { data: project, error } = await supabase
       .from('projects')
@@ -423,6 +426,7 @@ export const updateProjectStatus = async (projectId: string, status: ProjectStat
   }
 };
 
+// Team functions
 export const getTeamMembers = async (teamId: string) => {
   try {
     const { data: members, error } = await supabase
@@ -449,237 +453,26 @@ export const getTeamMembers = async (teamId: string) => {
   }
 };
 
-export const signIn = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      throw error;
-    }
-    
-    return { user: data.user, error: null };
-  } catch (error: any) {
-    console.error('Sign in error:', error);
-    return { user: null, error };
-  }
-};
-
-export const signOut = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return { error: null };
-  } catch (error: any) {
-    console.error('Sign out error:', error);
-    return { error };
-  }
-};
-
-export const signUp = async (email: string, password: string, name: string, role: UserRole) => {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          role
-        }
-      }
-    });
-    
-    if (error) {
-      throw error;
-    }
-    
-    return { user: data.user, error: null };
-  } catch (error: any) {
-    console.error('Sign up error:', error);
-    return { user: null, error };
-  }
-};
-
-export const getCurrentUser = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return { user: null, profile: null, error: null };
-    }
-    
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-      
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    
-    return { user, profile, error: null };
-  } catch (error: any) {
-    console.error('Get current user error:', error);
-    return { user: null, profile: null, error };
-  }
-};
-
-export const createProject = async (title: string, description: string, teamId?: string) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to create a project');
-    }
-    
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({
-        title,
-        description,
-        student_id: user.id,
-        team_id: teamId || null,
-        status: 'pending'
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      throw error;
-    }
-    
-    return { project: data as Project, error: null };
-  } catch (error: any) {
-    console.error('Create project error:', error);
-    return { project: null, error };
-  }
-};
-
-export const getStudentProjects = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to view your projects');
-    }
-    
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      throw error;
-    }
-    
-    const typedProjects = data.map(project => ({
-      ...project,
-      status: project.status as ProjectStatus
-    })) as Project[];
-    
-    return { projects: typedProjects, error: null };
-  } catch (error: any) {
-    console.error('Get student projects error:', error);
-    return { projects: [], error };
-  }
-};
-
-export const getAllProjects = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        profiles!projects_student_id_fkey (*)
-      `)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      throw error;
-    }
-    
-    const typedProjects = data.map(project => ({
-      ...project,
-      status: project.status as ProjectStatus,
-      profiles: project.profiles as any
-    })) as Project[];
-    
-    return { projects: typedProjects, error: null };
-  } catch (error: any) {
-    console.error('Get all projects error:', error);
-    return { projects: [], error };
-  }
-};
-
-export const getStudentAnalytics = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to view analytics');
-    }
-    
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('student_id', user.id);
-      
-    if (projectsError) {
-      throw projectsError;
-    }
-    
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('*')
-      .in('project_id', projects.map(p => p.id) || []);
-      
-    if (tasksError && projects.length > 0) {
-      throw tasksError;
-    }
-    
-    const analytics = {
-      pendingProjects: projects?.filter(p => p.status === 'pending').length || 0,
-      inReviewProjects: projects?.filter(p => p.status === 'in_review').length || 0,
-      changesRequestedProjects: projects?.filter(p => p.status === 'changes_requested').length || 0,
-      approvedProjects: projects?.filter(p => p.status === 'approved').length || 0,
-      completedTasks: tasks?.filter(t => t.status === 'completed').length || 0,
-      pendingTasks: tasks?.filter(t => t.status === 'pending').length || 0,
-      highPriorityTasks: tasks?.filter(t => t.priority === 'high').length || 0
-    };
-    
-    return { analytics, error: null };
-  } catch (error: any) {
-    console.error('Get student analytics error:', error);
-    return { analytics: null, error };
-  }
-};
-
-export const createTask = async (
-  projectId: string,
+// Notification functions
+export const createNotification = async (
+  userId: string,
   title: string,
-  description: string,
-  dueDate: Date,
-  priority: string
+  message: string,
+  type: string,
+  relatedId?: string
 ) => {
   try {
     const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        project_id: projectId,
-        title,
-        description,
-        due_date: dueDate.toISOString(),
-        priority,
-        status: 'pending'
-      })
+      .from('notifications')
+      .insert([
+        {
+          user_id: userId,
+          title,
+          message,
+          type,
+          related_id: relatedId,
+        },
+      ])
       .select()
       .single();
       
@@ -687,104 +480,9 @@ export const createTask = async (
       throw error;
     }
     
-    return { task: data, error: null };
+    return { notification: data, error: null };
   } catch (error: any) {
-    console.error('Create task error:', error);
-    return { task: null, error };
-  }
-};
-
-export const provideFeedback = async (
-  projectId: string,
-  comment: string,
-  taskId?: string
-) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('You must be logged in to provide feedback');
-    }
-    
-    const { data, error } = await supabase
-      .from('feedback')
-      .insert({
-        project_id: projectId,
-        comment,
-        faculty_id: user.id,
-        task_id: taskId || null
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      throw error;
-    }
-    
-    const { data: project } = await supabase
-      .from('projects')
-      .select('student_id')
-      .eq('id', projectId)
-      .single();
-      
-    if (project) {
-      await createNotification(
-        project.student_id,
-        'New Feedback Received',
-        'You have received new feedback on your project',
-        'feedback',
-        projectId
-      );
-    }
-    
-    return { feedback: data as Feedback, error: null };
-  } catch (error: any) {
-    console.error('Provide feedback error:', error);
-    return { feedback: null, error };
-  }
-};
-
-export const getProjectFeedback = async (projectId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('feedback')
-      .select(`
-        *,
-        faculty:faculty_id (
-          id,
-          name:profiles(name),
-          email:profiles(email),
-          avatar_url:profiles(avatar_url)
-        )
-      `)
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      throw error;
-    }
-    
-    const formattedFeedback = data.map(item => {
-      const facultyData = item.faculty || {} as any;
-      
-      const nameData = Array.isArray(facultyData.name) && facultyData.name.length > 0 ? facultyData.name[0] : null;
-      const emailData = Array.isArray(facultyData.email) && facultyData.email.length > 0 ? facultyData.email[0] : null;
-      const avatarData = Array.isArray(facultyData.avatar_url) && facultyData.avatar_url.length > 0 ? facultyData.avatar_url[0] : null;
-      
-      return {
-        ...item,
-        faculty: {
-          id: facultyData.id || '',
-          name: nameData && typeof nameData === 'object' && 'name' in nameData ? nameData.name : 'Faculty',
-          email: emailData && typeof emailData === 'object' && 'email' in emailData ? emailData.email : '',
-          avatar_url: avatarData && typeof avatarData === 'object' && 'avatar_url' in avatarData ? avatarData.avatar_url : null
-        }
-      };
-    });
-    
-    return { feedback: formattedFeedback, error: null };
-  } catch (error: any) {
-    console.error('Get project feedback error:', error);
-    return { feedback: [], error };
+    console.error('Error creating notification:', error);
+    return { notification: null, error };
   }
 };

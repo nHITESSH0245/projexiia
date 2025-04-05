@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'student' | 'faculty';
 
 export interface User {
@@ -32,10 +33,6 @@ export interface Project {
     name: string;
     email: string;
     avatar_url?: string;
-    id?: string;
-    role?: string;
-    created_at?: string;
-    updated_at?: string;
   };
 }
 
@@ -55,7 +52,7 @@ export interface ProjectMilestone {
   id: string;
   project_id: string;
   title: string;
-  description: string | null;
+  description: string;
   due_date: string;
   completed_at: string | null;
   created_at: string;
@@ -95,8 +92,6 @@ export interface Feedback {
   faculty?: {
     name: string;
     avatar_url?: string;
-    id?: string;
-    email?: string;
   };
 }
 

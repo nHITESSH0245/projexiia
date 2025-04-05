@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -19,7 +20,6 @@ import { ProjectTimeline } from '@/components/projects/ProjectTimeline';
 import { updateTaskStatus, updateProjectStatus } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FacultyAssignmentsList } from '@/components/projects/FacultyAssignmentsList';
 
 const ProjectDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -304,10 +304,6 @@ const ProjectDetails = () => {
             </Card>
             
             {role === 'student' && (
-              <FacultyAssignmentsList projectId={project.id} />
-            )}
-            
-            {role === 'student' && (
               <DocumentUploader 
                 projectId={project.id}
                 onUploadComplete={handleDocumentUploadComplete}
@@ -319,6 +315,7 @@ const ProjectDetails = () => {
               refreshTrigger={documentsRefreshTrigger}
             />
             
+            {/* Add Project Timeline component */}
             <ProjectTimeline 
               projectId={project.id} 
               status={project.status} 
