@@ -12,7 +12,7 @@ import { AnalyticsOverview } from '@/components/dashboard/AnalyticsOverview';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { ProjectForm } from '@/components/projects/ProjectForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentProjects, getStudentAnalytics } from '@/lib/supabase';
+import { getStudentProjects, getStudentAnalytics } from '@/lib/project';
 import { Project, Analytics } from '@/types';
 import { Loader2 } from 'lucide-react';
 

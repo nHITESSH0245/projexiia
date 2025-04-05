@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createProject } from '@/lib/supabase';
+import { createProject } from '@/lib/project';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

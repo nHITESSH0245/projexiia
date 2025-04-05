@@ -1,7 +1,7 @@
+// User roles
+export type UserRole = 'student' | 'faculty' | 'admin';
 
-
-export type UserRole = 'student' | 'faculty';
-
+// User type
 export interface User {
   id: string;
   email: string;
@@ -11,14 +11,10 @@ export interface User {
   created_at: string;
 }
 
-export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
-export type TaskStatus = 'todo' | 'in_progress' | 'completed';
-export type TaskPriority = 'high' | 'medium' | 'low';
-export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline' | 'team_invite' | 'team_update' | 'document_feedback';
-export type TeamMemberRole = 'leader' | 'member';
-export type TeamInviteStatus = 'pending' | 'accepted' | 'rejected';
-export type DocumentStatus = 'pending' | 'approved' | 'rejected';
+// Project status
+export type ProjectStatus = 'planning' | 'in-progress' | 'review' | 'completed' | 'on-hold';
 
+// Project type
 export interface Project {
   id: string;
   title: string;
@@ -28,38 +24,17 @@ export interface Project {
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
-  tasks?: Task[];
-  profiles?: {
+  student?: {
     name: string;
     email: string;
     avatar_url?: string;
   };
 }
 
-export interface Task {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string;
-  due_date: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  created_at: string;
-  updated_at: string;
-}
+// Document status
+export type DocumentStatus = 'pending' | 'approved' | 'rejected';
 
-export interface ProjectMilestone {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string;
-  due_date: string;
-  completed_at: string | null;
-  created_at: string;
-  updated_at: string;
-  document_id: string | null;
-}
-
+// Document type
 export interface Document {
   id: string;
   project_id: string;
@@ -69,24 +44,48 @@ export interface Document {
   file_size: number;
   uploaded_by: string;
   status: DocumentStatus;
-  faculty_remarks?: string | null;
+  faculty_remarks?: string;
   created_at: string;
   updated_at: string;
   project?: {
     title: string;
-    student?: {
+    student: {
       name: string;
       email: string;
-      avatar_url?: string | null;
+      avatar_url?: string;
     };
   };
 }
 
+// Analytics type
+export interface Analytics {
+  totalProjects: number;
+  completedProjects: number;
+  totalTasks: number;
+  completedTasks: number;
+  totalDocuments: number;
+  approvedDocuments: number;
+}
+
+// Milestone type
+export interface Milestone {
+  id: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  due_date: string;
+  completed_at?: string;
+  document_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Feedback type
 export interface Feedback {
   id: string;
   project_id: string;
-  task_id?: string;
   faculty_id: string;
+  task_id?: string;
   comment: string;
   created_at: string;
   faculty?: {
@@ -95,67 +94,27 @@ export interface Feedback {
   };
 }
 
+// Task type
+export interface Task {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in-progress' | 'review' | 'completed';
+  due_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notification type
 export interface Notification {
   id: string;
   user_id: string;
   title: string;
   message: string;
+  type: string;
   is_read: boolean;
-  type: NotificationType;
   related_id?: string;
   created_at: string;
-}
-
-export interface Analytics {
-  pendingProjects: number;
-  inReviewProjects: number;
-  changesRequestedProjects: number;
-  approvedProjects: number;
-  completedTasks: number;
-  pendingTasks: number;
-  highPriorityTasks: number;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  creator_id: string;
-  created_at: string;
-  updated_at: string;
-  members?: TeamMember[];
-  projects?: Project[];
-}
-
-export interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: TeamMemberRole;
-  join_date: string;
-  profile?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
-
-export interface TeamInvite {
-  id: string;
-  team_id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: TeamInviteStatus;
-  created_at: string;
-  updated_at: string;
-  team?: Team;
-  inviter?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
-  invitee?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
 }

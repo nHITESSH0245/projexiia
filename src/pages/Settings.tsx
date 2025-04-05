@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
-import { signOut } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
 import { Input } from '@/components/ui/input';
 import {
   AlertDialog,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -217,12 +216,7 @@ export const ProjectTimeline = ({ projectId, status }: ProjectTimelineProps) => 
             <DialogContent className="sm:max-w-[550px]">
               <MilestoneForm
                 projectId={projectId}
-                milestoneId={selectedMilestone?.id}
-                initialData={selectedMilestone ? {
-                  title: selectedMilestone.title,
-                  description: selectedMilestone.description,
-                  due_date: new Date(selectedMilestone.due_date)
-                } : undefined}
+                milestone={selectedMilestone}
                 onSuccess={() => {
                   setIsFormDialogOpen(false);
                   fetchMilestones();

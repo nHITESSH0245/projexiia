@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import { LucideShapes, LogOut, User, Settings, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { signOut } from '@/lib/supabase';
+import { signOut } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
