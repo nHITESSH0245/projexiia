@@ -20,7 +20,7 @@ import {
   File as FileIcon,
   ExternalLink 
 } from 'lucide-react';
-import { reviewDocument, getDocumentUrl } from '@/lib/document';
+import { reviewDocument, getDocumentUrl } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
 
