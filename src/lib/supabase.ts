@@ -452,37 +452,3 @@ export const getTeamMembers = async (teamId: string) => {
     return { members: [], error };
   }
 };
-
-// Notification functions
-export const createNotification = async (
-  userId: string,
-  title: string,
-  message: string,
-  type: string,
-  relatedId?: string
-) => {
-  try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert([
-        {
-          user_id: userId,
-          title,
-          message,
-          type,
-          related_id: relatedId,
-        },
-      ])
-      .select()
-      .single();
-      
-    if (error) {
-      throw error;
-    }
-    
-    return { notification: data, error: null };
-  } catch (error: any) {
-    console.error('Error creating notification:', error);
-    return { notification: null, error };
-  }
-};
