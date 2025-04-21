@@ -1,6 +1,8 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { signIn } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
