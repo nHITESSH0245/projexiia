@@ -120,6 +120,7 @@ export const getStudentAnalytics = async () => {
       .select(`
         id,
         status,
+        priority,
         project_id,
         projects!inner (
           student_id
@@ -148,9 +149,17 @@ export const getStudentAnalytics = async () => {
       throw documentsError;
     }
 
-    // Calculate analytics
+    // Calculate analytics with detailed project status counts
+    const pendingProjects = projects.filter(p => p.status === 'pending').length;
+    const inReviewProjects = projects.filter(p => p.status === 'in_review').length;
+    const changesRequestedProjects = projects.filter(p => p.status === 'changes_requested').length;
+    const approvedProjects = projects.filter(p => p.status === 'approved').length;
     const completedProjects = projects.filter(p => p.status === 'completed').length;
+
     const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'todo' || t.status === 'in_progress').length;
+    const highPriorityTasks = tasks.filter(t => t.priority === 'high').length;
+
     const approvedDocuments = documents.filter(d => d.status === 'approved').length;
 
     const analytics: Analytics = {
@@ -159,7 +168,13 @@ export const getStudentAnalytics = async () => {
       totalTasks: tasks.length,
       completedTasks,
       totalDocuments: documents.length,
-      approvedDocuments
+      approvedDocuments,
+      pendingProjects,
+      inReviewProjects,
+      changesRequestedProjects,
+      approvedProjects,
+      pendingTasks,
+      highPriorityTasks
     };
 
     return { analytics, error: null };
@@ -173,7 +188,13 @@ export const getStudentAnalytics = async () => {
       totalTasks: 0,
       completedTasks: 0,
       totalDocuments: 0,
-      approvedDocuments: 0
+      approvedDocuments: 0,
+      pendingProjects: 0,
+      inReviewProjects: 0,
+      changesRequestedProjects: 0,
+      approvedProjects: 0,
+      pendingTasks: 0,
+      highPriorityTasks: 0
     };
     
     return { analytics: emptyAnalytics, error };

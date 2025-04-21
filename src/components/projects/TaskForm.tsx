@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,12 +38,13 @@ export const TaskForm = ({ projectId, onSuccess, onCancel }: TaskFormProps) => {
     setIsSubmitting(true);
     
     try {
+      // Convert the Date object to an ISO string before passing to the createTask function
       const { task, error } = await createTask(
         projectId,
         title,
         description,
-        dueDate,
-        priority
+        priority,
+        dueDate.toISOString()
       );
       
       if (error) {

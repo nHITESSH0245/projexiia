@@ -1,3 +1,4 @@
+
 // User roles
 export type UserRole = 'student' | 'faculty' | 'admin';
 
@@ -11,10 +12,10 @@ export interface User {
   created_at: string;
 }
 
-// Project status
-export type ProjectStatus = 'planning' | 'in-progress' | 'review' | 'completed' | 'on-hold';
+// Project status - updated to match the string literals used in the code
+export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved' | 'planning' | 'in-progress' | 'review' | 'completed' | 'on-hold';
 
-// Project type
+// Project type - updated to include tasks and profiles properties
 export interface Project {
   id: string;
   title: string;
@@ -24,6 +25,12 @@ export interface Project {
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
+  tasks?: Task[];
+  profiles?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
   student?: {
     name: string;
     email: string;
@@ -57,7 +64,7 @@ export interface Document {
   };
 }
 
-// Analytics type
+// Analytics type - expanded to include all the properties used in the AnalyticsOverview component
 export interface Analytics {
   totalProjects: number;
   completedProjects: number;
@@ -65,6 +72,12 @@ export interface Analytics {
   completedTasks: number;
   totalDocuments: number;
   approvedDocuments: number;
+  pendingProjects: number;
+  inReviewProjects: number;
+  changesRequestedProjects: number;
+  approvedProjects: number;
+  pendingTasks: number;
+  highPriorityTasks: number;
 }
 
 // Milestone type
@@ -101,7 +114,7 @@ export interface Task {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'in-progress' | 'review' | 'completed';
+  status: 'todo' | 'in_progress' | 'completed' | 'pending' | 'in-progress' | 'review';
   due_date: string;
   created_at: string;
   updated_at: string;
@@ -117,4 +130,42 @@ export interface Notification {
   is_read: boolean;
   related_id?: string;
   created_at: string;
+}
+
+// Team related types
+export interface Team {
+  id: string;
+  name: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'leader' | 'member';
+  join_date: string;
+  profile?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}
+
+export interface TeamInvite {
+  id: string;
+  team_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  team?: Team;
+  inviter?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
 }
