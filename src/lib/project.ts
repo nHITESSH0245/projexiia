@@ -5,7 +5,8 @@ import { Analytics, Project } from "@/types";
 export const createProject = async (
   title: string,
   description: string,
-  status: string = 'planning'
+  status: string = 'planning',
+  teamId?: string
 ) => {
   try {
     // Get current user
@@ -15,14 +16,21 @@ export const createProject = async (
       throw new Error('You must be logged in to create a project');
     }
 
+    const projectData: any = {
+      title,
+      description,
+      status,
+      student_id: user.id,
+    };
+
+    // Only add team_id if it exists
+    if (teamId) {
+      projectData.team_id = teamId;
+    }
+
     const { data, error } = await supabase
       .from('projects')
-      .insert({
-        title,
-        description,
-        student_id: user.id,
-        status
-      })
+      .insert(projectData)
       .select()
       .single();
 

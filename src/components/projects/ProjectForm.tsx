@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { createProject } from '@/lib/project';
@@ -30,7 +31,7 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
     setIsSubmitting(true);
     
     try {
-      const { project, error } = await createProject(title, description, teamId);
+      const { project, error } = await createProject(title, description, 'planning', teamId);
       
       if (error) {
         toast.error(`Failed to create project: ${error.message}`);
