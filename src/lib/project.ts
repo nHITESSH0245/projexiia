@@ -16,6 +16,8 @@ export const createProject = async (
       throw new Error('You must be logged in to create a project');
     }
 
+    console.log('Creating project with user ID:', user.id);
+    
     const projectData: any = {
       title,
       description,
@@ -28,6 +30,8 @@ export const createProject = async (
       projectData.team_id = teamId;
     }
 
+    console.log('Project data to insert:', projectData);
+
     const { data, error } = await supabase
       .from('projects')
       .insert(projectData)
@@ -35,9 +39,11 @@ export const createProject = async (
       .single();
 
     if (error) {
+      console.error('Supabase error:', error);
       throw error;
     }
 
+    console.log('Project created successfully:', data);
     return { project: data, error: null };
   } catch (error: any) {
     console.error('Error creating project:', error);
