@@ -31,19 +31,22 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
     setIsSubmitting(true);
     
     try {
+      console.log('Submitting project form:', { title, description, teamId });
       const { project, error } = await createProject(title, description, 'planning', teamId);
       
       if (error) {
-        toast.error(`Failed to create project: ${error.message}`);
+        console.error('Project creation error:', error);
+        toast.error(`Failed to create project: ${error.message || 'Unknown error'}`);
       } else {
+        console.log('Project created:', project);
         toast.success(`Project created successfully!${teamId ? ' Team members can now contribute to it.' : ''}`);
         setTitle('');
         setDescription('');
         if (onSuccess) onSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Project creation error:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error(`An unexpected error occurred: ${error.message || 'Please try again'}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -32,19 +32,34 @@ export const createProject = async (
 
     console.log('Project data to insert:', projectData);
 
-    const { data, error } = await supabase
+    // First try inserting without selecting to avoid potential RLS recursion
+    const { error: insertError } = await supabase
       .from('projects')
-      .insert(projectData)
-      .select()
-      .single();
+      .insert(projectData);
 
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+    if (insertError) {
+      console.error('Supabase insert error:', insertError);
+      throw insertError;
     }
 
-    console.log('Project created successfully:', data);
-    return { project: data, error: null };
+    // Then fetch the newly created project separately
+    const { data: projects, error: fetchError } = await supabase
+      .from('projects')
+      .select()
+      .eq('title', title)
+      .eq('student_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (fetchError) {
+      console.error('Supabase fetch error:', fetchError);
+      throw fetchError;
+    }
+
+    const project = projects && projects.length > 0 ? projects[0] : null;
+    console.log('Project created successfully:', project);
+    
+    return { project, error: null };
   } catch (error: any) {
     console.error('Error creating project:', error);
     return { project: null, error };
