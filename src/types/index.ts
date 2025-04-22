@@ -1,5 +1,3 @@
-
-
 export type UserRole = 'student' | 'faculty';
 
 export interface User {
@@ -46,18 +44,6 @@ export interface Task {
   status: TaskStatus;
   created_at: string;
   updated_at: string;
-}
-
-export interface ProjectMilestone {
-  id: string;
-  project_id: string;
-  title: string;
-  description: string;
-  due_date: string;
-  completed_at: string | null;
-  created_at: string;
-  updated_at: string;
-  document_id: string | null;
 }
 
 export interface Document {

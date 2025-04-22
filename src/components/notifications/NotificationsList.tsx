@@ -17,7 +17,6 @@ import { Notification } from '@/types';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notification';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'sonner';
 
 export const NotificationsList = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -42,49 +41,36 @@ export const NotificationsList = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      
-      // Set up polling for new notifications
-      const intervalId = setInterval(fetchNotifications, 60000); // Poll every minute
-      
-      return () => clearInterval(intervalId);
-    }
+    fetchNotifications();
+    
+    // Set up polling for new notifications
+    const intervalId = setInterval(fetchNotifications, 60000); // Poll every minute
+    
+    return () => clearInterval(intervalId);
   }, [user]);
 
   const handleNotificationClick = async (notification: Notification) => {
-    try {
-      // Mark as read
-      await markNotificationAsRead(notification.id);
-      
-      // Navigate based on notification type
-      if (notification.type === 'feedback' || notification.type === 'status_change' || notification.type === 'task_assigned') {
-        if (notification.related_id) {
-          navigate(`/projects/${notification.related_id}`);
-        }
+    // Mark as read
+    await markNotificationAsRead(notification.id);
+    
+    // Navigate based on notification type
+    if (notification.type === 'feedback' || notification.type === 'status_change') {
+      if (notification.related_id) {
+        navigate(`/projects/${notification.related_id}`);
       }
-      
-      // Refresh notifications
-      fetchNotifications();
-    } catch (error) {
-      console.error('Error handling notification click:', error);
+    } else if (notification.type === 'task_assigned') {
+      if (notification.related_id) {
+        navigate(`/projects/${notification.related_id}`);
+      }
     }
+    
+    // Refresh notifications
+    fetchNotifications();
   };
 
   const handleMarkAllAsRead = async () => {
-    try {
-      const { error } = await markAllNotificationsAsRead();
-      if (error) {
-        toast.error('Failed to mark notifications as read');
-        return;
-      }
-      
-      toast.success('All notifications marked as read');
-      fetchNotifications();
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-      toast.error('An error occurred');
-    }
+    await markAllNotificationsAsRead();
+    fetchNotifications();
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
