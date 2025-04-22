@@ -10,25 +10,14 @@ export interface User {
   created_at: string;
 }
 
-export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
-export type TaskStatus = 'todo' | 'in_progress' | 'completed';
-export type TaskPriority = 'high' | 'medium' | 'low';
-export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
-
 export interface Project {
   id: string;
   title: string;
   description: string;
   student_id: string;
-  status: ProjectStatus;
+  status: 'pending' | 'in_review' | 'changes_requested' | 'approved';
   created_at: string;
   updated_at: string;
-  tasks?: Task[];
-  profiles?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
 }
 
 export interface Task {
@@ -37,8 +26,8 @@ export interface Task {
   title: string;
   description: string;
   due_date: string;
-  priority: TaskPriority;
-  status: TaskStatus;
+  priority: 'high' | 'medium' | 'low';
+  status: 'todo' | 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
 }
@@ -50,29 +39,4 @@ export interface Feedback {
   faculty_id: string;
   comment: string;
   created_at: string;
-  faculty?: {
-    name: string;
-    avatar_url?: string;
-  };
-}
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  type: NotificationType;
-  related_id?: string;
-  created_at: string;
-}
-
-export interface Analytics {
-  pendingProjects: number;
-  inReviewProjects: number;
-  changesRequestedProjects: number;
-  approvedProjects: number;
-  completedTasks: number;
-  pendingTasks: number;
-  highPriorityTasks: number;
 }

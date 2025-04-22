@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { NotificationsList } from '@/components/notifications/NotificationsList';
 
 export function Header() {
   const { user, isAuthenticated } = useAuth();
@@ -85,10 +84,6 @@ export function Header() {
             )}
           </Button>
 
-          {isAuthenticated && (
-            <NotificationsList />
-          )}
-
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -149,4 +144,4 @@ export function Header() {
       </div>
     </header>
   );
-};
+}
