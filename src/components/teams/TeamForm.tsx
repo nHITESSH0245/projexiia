@@ -28,21 +28,18 @@ export const TeamForm = ({ onSuccess, onCancel }: TeamFormProps) => {
     setIsSubmitting(true);
     
     try {
-      console.log('Creating team with name:', name);
       const { team, error } = await createTeam(name);
       
       if (error) {
-        console.error('Team creation error:', error);
-        toast.error(`Failed to create team: ${error.message || 'Unknown error'}`);
+        toast.error(`Failed to create team: ${error.message}`);
       } else {
-        console.log('Team created successfully:', team);
-        toast.success('Team created successfully! You can now invite members.');
+        toast.success('Team created successfully!');
         setName('');
         if (onSuccess) onSuccess();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Team creation error:', error);
-      toast.error(`An unexpected error occurred: ${error.message || 'Please try again'}`);
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

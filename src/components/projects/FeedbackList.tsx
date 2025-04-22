@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MessageSquare } from 'lucide-react';
 import { formatDistance } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Feedback } from '@/types';
-import { getProjectFeedback } from '@/lib/feedback';
+import { getProjectFeedback } from '@/lib/supabase';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 
 interface FeedbackListProps {

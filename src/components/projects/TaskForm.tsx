@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { createTask } from '@/lib/task';
+import { createTask } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -38,13 +38,12 @@ export const TaskForm = ({ projectId, onSuccess, onCancel }: TaskFormProps) => {
     setIsSubmitting(true);
     
     try {
-      // Convert the Date object to an ISO string before passing to the createTask function
       const { task, error } = await createTask(
         projectId,
         title,
         description,
-        priority,
-        dueDate.toISOString()
+        dueDate,
+        priority
       );
       
       if (error) {

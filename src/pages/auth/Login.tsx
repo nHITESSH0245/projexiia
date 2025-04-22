@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { signIn } from '@/lib/auth';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { signIn } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,10 +20,12 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
+    // If a message was passed from register page, show it
     if (location.state?.message) {
       toast.success(location.state.message);
     }
     
+    // If user is already logged in, redirect to dashboard
     if (user) {
       navigate('/dashboard');
     }

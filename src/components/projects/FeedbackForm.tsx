@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { provideFeedback } from '@/lib/feedback';
+import { provideFeedback } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface FeedbackFormProps {

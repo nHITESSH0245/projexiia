@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createProject } from '@/lib/project';
+import { createProject } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,22 +31,19 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting project form:', { title, description, teamId });
-      const { project, error } = await createProject(title, description, 'planning', teamId);
+      const { project, error } = await createProject(title, description, teamId);
       
       if (error) {
-        console.error('Project creation error:', error);
-        toast.error(`Failed to create project: ${error.message || 'Unknown error'}`);
+        toast.error(`Failed to create project: ${error.message}`);
       } else {
-        console.log('Project created:', project);
         toast.success(`Project created successfully!${teamId ? ' Team members can now contribute to it.' : ''}`);
         setTitle('');
         setDescription('');
         if (onSuccess) onSuccess();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Project creation error:', error);
-      toast.error(`An unexpected error occurred: ${error.message || 'Please try again'}`);
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

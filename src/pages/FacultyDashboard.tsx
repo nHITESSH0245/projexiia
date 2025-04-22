@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users, ClipboardCheck, Search, Calendar, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectCard } from '@/components/projects/ProjectCard';
-import { getAllProjects } from '@/lib/project';
+import { getAllProjects } from '@/lib/supabase';
 import { Project } from '@/types';
 import { Loader2 } from 'lucide-react';
 import {
