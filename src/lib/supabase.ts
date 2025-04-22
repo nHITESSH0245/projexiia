@@ -1,31 +1,16 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Use the direct values from the Supabase integration
+const supabaseUrl = "https://tnlyjkajoovwviuwrecb.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRubHlqa2Fqb292d3ZpdXdyZWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxMDEwMjcsImV4cCI6MjA1NzY3NzAyN30.N9A0vZcTjsRdUaY00Nd9d_cRwDyPEBfPHX1gqOEKdjE";
 
-// Check if the environment variables are set
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
-}
-
-// Create Supabase client with fallback values for development
-export const supabase = createClient(
-  // Use dummy values if not available to prevent runtime errors
-  supabaseUrl || 'https://placeholder-project.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+// Create Supabase client with the hardcoded values
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
-  try {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      toast.error('Supabase credentials are not configured. Please contact the administrator.');
-      return { user: null, error: new Error('Supabase credentials not configured') };
-    }
-    
+  try {    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,

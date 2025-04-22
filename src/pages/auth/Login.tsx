@@ -1,13 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LucideShapes, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { LucideShapes, Eye, EyeOff } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -17,28 +16,11 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [configError, setConfigError] = useState(false);
   const navigate = useNavigate();
   const { checkSession } = useAuth();
-  
-  // Check if Supabase is properly configured
-  useEffect(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      setConfigError(true);
-      console.error('Supabase configuration missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (configError) {
-      toast.error('Cannot log in: Supabase is not properly configured');
-      return;
-    }
     
     if (!email || !password) {
       toast.error('Please enter both email and password');
@@ -85,15 +67,6 @@ const Login = () => {
         </div>
         
         <Card className="border-border/50 shadow-lg">
-          {configError && (
-            <Alert variant="destructive" className="mt-4 mx-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Supabase connection is not configured properly. Please ensure you've set up the Supabase environment variables.
-              </AlertDescription>
-            </Alert>
-          )}
-          
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
             <CardDescription>Enter your credentials to access your account</CardDescription>
@@ -110,7 +83,6 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="transition-all duration-200"
-                  disabled={configError}
                 />
               </div>
               <div className="space-y-2">
@@ -132,7 +104,6 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="pr-10 transition-all duration-200"
-                    disabled={configError}
                   />
                   <Button
                     type="button"
@@ -140,7 +111,6 @@ const Login = () => {
                     size="icon"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={configError}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -155,7 +125,7 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || configError}
+                disabled={isLoading}
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
@@ -171,12 +141,6 @@ const Login = () => {
             </CardFooter>
           </form>
         </Card>
-        
-        {configError && (
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>To fix this issue, connect this project to Supabase using the integration button at the top of the page.</p>
-          </div>
-        )}
       </div>
     </Layout>
   );
