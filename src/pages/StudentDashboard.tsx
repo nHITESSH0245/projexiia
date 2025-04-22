@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
-import { FolderPlus, Calendar, BarChart3, List, Clock } from 'lucide-react';
+import { FolderPlus, Calendar, BarChart3, List, Clock, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectList } from '@/components/projects/ProjectList';
@@ -64,10 +63,16 @@ const StudentDashboard = () => {
           description="Manage your projects and tasks"
           className="mb-6"
         >
-          <Button onClick={handleNewProject}>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New Project
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleNewProject}>
+              <FolderPlus className="mr-2 h-4 w-4" />
+              New Project
+            </Button>
+            <Button variant="outline" onClick={fetchProjects}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </DashboardHeader>
 
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -169,8 +174,16 @@ const StudentDashboard = () => {
           <TabsContent value="projects" className="animate-fade-in">
             <Card>
               <CardHeader>
-                <CardTitle>Your Projects</CardTitle>
-                <CardDescription>Manage and track all your projects</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Your Projects</CardTitle>
+                    <CardDescription>Manage and track all your projects</CardDescription>
+                  </div>
+                  <Button onClick={handleNewProject}>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    New Project
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {loadingProjects ? (
