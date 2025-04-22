@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NewProjectDialogProps {
   open: boolean;
@@ -16,21 +17,33 @@ export function NewProjectDialog({ open, onOpenChange, onProjectCreated }: NewPr
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleCreate = async () => {
     if (!title.trim() || !description.trim()) {
       toast({ title: "Missing info", description: "Please enter title and description", variant: "destructive" });
       return;
     }
+    
+    if (!user?.id) {
+      toast({ title: "Authentication error", description: "You must be logged in to create a project", variant: "destructive" });
+      return;
+    }
+    
     setIsLoading(true);
-    const { data, error } = await supabase.from("projects").insert([
-      { title, description, status: "pending" }
-    ]);
+    const { data, error } = await supabase.from("projects").insert({
+      title,
+      description,
+      status: "pending",
+      student_id: user.id
+    });
+    
     setIsLoading(false);
+    
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Project created!", variant: "success" });
+      toast({ title: "Project created!", description: "Your project has been created successfully", variant: "default" });
       setTitle("");
       setDescription("");
       onOpenChange(false);

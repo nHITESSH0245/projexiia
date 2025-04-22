@@ -40,7 +40,7 @@ export function NewTaskDialog({ projectId, open, onOpenChange, onTaskCreated }: 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Task created!", variant: "success" });
+      toast({ title: "Task created!", description: "Your task has been created successfully", variant: "default" });
       setTitle("");
       setDescription("");
       setDueDate("");
