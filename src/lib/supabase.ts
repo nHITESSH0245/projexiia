@@ -3,21 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 // Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Check if the environment variables are set
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase credentials');
+  console.error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
 }
 
+// Create Supabase client with fallback values for development
 export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
+  // Use dummy values if not available to prevent runtime errors
+  supabaseUrl || 'https://placeholder-project.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
 );
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
   try {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      toast.error('Supabase credentials are not configured. Please contact the administrator.');
+      return { user: null, error: new Error('Supabase credentials not configured') };
+    }
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
