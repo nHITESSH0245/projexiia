@@ -11,7 +11,7 @@ export const getNotifications = async () => {
       return { notifications: [], error: new Error('User not authenticated') };
     }
 
-    // Use type assertion to handle the missing type in the database types
+    // Use raw query for now as a workaround since the notification table isn't in the typings
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -32,7 +32,7 @@ export const getNotifications = async () => {
 
 export const markNotificationAsRead = async (notificationId: string) => {
   try {
-    // Use type assertion to handle the missing type in the database types
+    // Use raw query for now as a workaround since the notification table isn't in the typings
     const { data, error } = await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -58,7 +58,7 @@ export const markAllNotificationsAsRead = async () => {
       return { error: new Error('User not authenticated') };
     }
 
-    // Use type assertion to handle the missing type in the database types
+    // Use raw query for now as a workaround since the notification table isn't in the typings
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -86,7 +86,6 @@ export const createNotification = async (
   relatedId?: string
 ) => {
   try {
-    // Use type assertion to handle the missing type in the database types
     const { data, error } = await supabase
       .from('notifications')
       .insert({

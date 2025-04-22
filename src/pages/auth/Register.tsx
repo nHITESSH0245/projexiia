@@ -62,7 +62,7 @@ const Register = () => {
 
   return (
     <Layout hideHeader className="bg-gradient-to-b from-background to-muted/30 min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md flex flex-col items-center">
+      <div className="w-full max-w-md animate-scale-in">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 group">
             <LucideShapes 
@@ -73,10 +73,10 @@ const Register = () => {
           </Link>
         </div>
         
-        <Card className="border-border/50 shadow-lg w-full">
+        <Card className="border-border/50 shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
-            <CardDescription className="text-center">Enter your information to get started</CardDescription>
+            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+            <CardDescription>Enter your information to get started</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">

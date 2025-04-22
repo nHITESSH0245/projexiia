@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
@@ -13,7 +14,6 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { TaskForm } from '@/components/projects/TaskForm';
 import { FeedbackForm } from '@/components/projects/FeedbackForm';
 import { FeedbackList } from '@/components/projects/FeedbackList';
-import { DocumentsList } from '@/components/projects/DocumentsList';
 import { updateTaskStatus, updateProjectStatus } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -294,8 +294,6 @@ const ProjectDetails = () => {
                 <p>{project.description}</p>
               </CardContent>
             </Card>
-            
-            <DocumentsList projectId={project.id} />
             
             <Card>
               <CardHeader>

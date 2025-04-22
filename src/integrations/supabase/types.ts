@@ -9,56 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      documents: {
-        Row: {
-          created_at: string
-          faculty_remarks: string | null
-          file_path: string
-          file_size: number
-          file_type: string
-          id: string
-          name: string
-          project_id: string
-          status: string
-          updated_at: string
-          uploaded_by: string
-        }
-        Insert: {
-          created_at?: string
-          faculty_remarks?: string | null
-          file_path: string
-          file_size: number
-          file_type: string
-          id?: string
-          name: string
-          project_id: string
-          status?: string
-          updated_at?: string
-          uploaded_by: string
-        }
-        Update: {
-          created_at?: string
-          faculty_remarks?: string | null
-          file_path?: string
-          file_size?: number
-          file_type?: string
-          id?: string
-          name?: string
-          project_id?: string
-          status?: string
-          updated_at?: string
-          uploaded_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "documents_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       feedback: {
         Row: {
           comment: string
@@ -108,39 +58,6 @@ export type Database = {
           },
         ]
       }
-      notifications: {
-        Row: {
-          created_at: string
-          id: string
-          is_read: boolean
-          message: string
-          related_id: string | null
-          title: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message: string
-          related_id?: string | null
-          title: string
-          type: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message?: string
-          related_id?: string | null
-          title?: string
-          type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -178,7 +95,6 @@ export type Database = {
           id: string
           status: string
           student_id: string
-          team_id: string | null
           title: string
           updated_at: string
         }
@@ -188,7 +104,6 @@ export type Database = {
           id?: string
           status: string
           student_id: string
-          team_id?: string | null
           title: string
           updated_at?: string
         }
@@ -198,7 +113,6 @@ export type Database = {
           id?: string
           status?: string
           student_id?: string
-          team_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -208,13 +122,6 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -262,100 +169,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      team_invites: {
-        Row: {
-          created_at: string
-          id: string
-          invitee_id: string
-          inviter_id: string
-          status: string
-          team_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          invitee_id: string
-          inviter_id: string
-          status?: string
-          team_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          invitee_id?: string
-          inviter_id?: string
-          status?: string
-          team_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_invites_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      team_members: {
-        Row: {
-          id: string
-          join_date: string
-          role: string
-          team_id: string
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          join_date?: string
-          role?: string
-          team_id: string
-          user_id: string
-        }
-        Update: {
-          id?: string
-          join_date?: string
-          role?: string
-          team_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_members_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teams: {
-        Row: {
-          created_at: string
-          creator_id: string
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          creator_id: string
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
     }
     Views: {

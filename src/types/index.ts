@@ -1,3 +1,4 @@
+
 export type UserRole = 'student' | 'faculty';
 
 export interface User {
@@ -12,17 +13,13 @@ export interface User {
 export type ProjectStatus = 'pending' | 'in_review' | 'changes_requested' | 'approved';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'high' | 'medium' | 'low';
-export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline' | 'team_invite' | 'team_update' | 'document_feedback';
-export type TeamMemberRole = 'leader' | 'member';
-export type TeamInviteStatus = 'pending' | 'accepted' | 'rejected';
-export type DocumentStatus = 'pending' | 'approved' | 'rejected';
+export type NotificationType = 'feedback' | 'status_change' | 'task_assigned' | 'deadline';
 
 export interface Project {
   id: string;
   title: string;
   description: string;
   student_id: string;
-  team_id?: string;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
@@ -44,28 +41,6 @@ export interface Task {
   status: TaskStatus;
   created_at: string;
   updated_at: string;
-}
-
-export interface Document {
-  id: string;
-  project_id: string;
-  name: string;
-  file_path: string;
-  file_type: string;
-  file_size: number;
-  uploaded_by: string;
-  status: DocumentStatus;
-  faculty_remarks?: string | null;
-  created_at: string;
-  updated_at: string;
-  project?: {
-    title: string;
-    student?: {
-      name: string;
-      email: string;
-      avatar_url?: string | null;
-    };
-  };
 }
 
 export interface Feedback {
@@ -100,48 +75,4 @@ export interface Analytics {
   completedTasks: number;
   pendingTasks: number;
   highPriorityTasks: number;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  creator_id: string;
-  created_at: string;
-  updated_at: string;
-  members?: TeamMember[];
-  projects?: Project[];
-}
-
-export interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: TeamMemberRole;
-  join_date: string;
-  profile?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
-
-export interface TeamInvite {
-  id: string;
-  team_id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: TeamInviteStatus;
-  created_at: string;
-  updated_at: string;
-  team?: Team;
-  inviter?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
-  invitee?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
 }

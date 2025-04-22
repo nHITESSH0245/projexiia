@@ -27,8 +27,8 @@ export function Layout({ children, hideHeader = false, className }: LayoutProps)
       {!hideHeader && <Header />}
       <main
         className={cn(
-          "flex-1",
-          !hideHeader && "pt-16", // Add padding for the fixed header
+          "flex-1 pt-16", // Add padding for the fixed header
+          !hideHeader && "pt-16", // Add padding for header
           className
         )}
       >

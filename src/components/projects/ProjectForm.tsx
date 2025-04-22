@@ -12,10 +12,9 @@ import { Loader2 } from 'lucide-react';
 interface ProjectFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  teamId?: string;
 }
 
-export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) => {
+export const ProjectForm = ({ onSuccess, onCancel }: ProjectFormProps) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,12 +30,12 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
     setIsSubmitting(true);
     
     try {
-      const { project, error } = await createProject(title, description, teamId);
+      const { project, error } = await createProject(title, description);
       
       if (error) {
         toast.error(`Failed to create project: ${error.message}`);
       } else {
-        toast.success(`Project created successfully!${teamId ? ' Team members can now contribute to it.' : ''}`);
+        toast.success('Project created successfully!');
         setTitle('');
         setDescription('');
         if (onSuccess) onSuccess();
@@ -52,7 +51,7 @@ export const ProjectForm = ({ onSuccess, onCancel, teamId }: ProjectFormProps) =
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{teamId ? 'Create New Team Project' : 'Create New Project'}</CardTitle>
+        <CardTitle>Create New Project</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">

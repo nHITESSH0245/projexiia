@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -6,19 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
-import { FolderPlus, Calendar, BarChart3, List, Clock, UserPlus, Users } from 'lucide-react';
+import { FolderPlus, Calendar, BarChart3, List, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectForm } from '@/components/projects/ProjectForm';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { getStudentProjects } from '@/lib/supabase';
-import { Project, Task, Team, TeamMember, TeamInvite } from '@/types';
+import { Project, Task } from '@/types';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getUserTeam, getPendingInvites, getTeamProjects } from '@/lib/team';
-import { TeamForm } from '@/components/teams/TeamForm';
-import { TeamInfo } from '@/components/teams/TeamInfo';
-import { TeamInvites } from '@/components/teams/TeamInvites';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -27,54 +22,18 @@ const StudentDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeTasks, setActiveTasks] = useState<Task[]>([]);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
-  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [team, setTeam] = useState<Team | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [teamUserRole, setTeamUserRole] = useState<string>('');
-  const [pendingInvites, setPendingInvites] = useState<TeamInvite[]>([]);
-  const [teamProjects, setTeamProjects] = useState<Project[]>([]);
   
   const fetchData = async () => {
     setIsLoading(true);
+    const { projects, error } = await getStudentProjects();
     
-    // Fetch user's team
-    const { team: userTeam, members, userRole, error: teamError } = await getUserTeam();
-    if (teamError) {
-      console.error('Error fetching team:', teamError);
-    } else {
-      setTeam(userTeam);
-      setTeamMembers(members || []);
-      setTeamUserRole(userRole || '');
-      
-      // If user has a team, fetch team projects
-      if (userTeam) {
-        const { projects: teamProjs, error: projError } = await getTeamProjects(userTeam.id);
-        if (!projError) {
-          setTeamProjects(teamProjs || []);
-        }
-      }
-    }
-    
-    // Fetch individual projects
-    const { projects: userProjects, error } = await getStudentProjects();
     if (error) {
       console.error('Error fetching projects:', error);
     } else {
-      setProjects(userProjects);
+      setProjects(projects);
       
       const allTasks: Task[] = [];
-      userProjects.forEach(project => {
-        if (project.tasks && Array.isArray(project.tasks)) {
-          project.tasks.forEach(task => {
-            if (task.status !== 'completed') {
-              allTasks.push(task);
-            }
-          });
-        }
-      });
-      
-      // Also add tasks from team projects
-      teamProjects.forEach(project => {
+      projects.forEach(project => {
         if (project.tasks && Array.isArray(project.tasks)) {
           project.tasks.forEach(task => {
             if (task.status !== 'completed') {
@@ -96,14 +55,6 @@ const StudentDashboard = () => {
       setActiveTasks(sortedTasks);
     }
     
-    // Fetch pending team invites
-    if (!team) {
-      const { invites, error: invitesError } = await getPendingInvites();
-      if (!invitesError) {
-        setPendingInvites(invites);
-      }
-    }
-    
     setIsLoading(false);
   };
   
@@ -115,30 +66,10 @@ const StudentDashboard = () => {
     setIsProjectDialogOpen(true);
   };
 
-  const handleNewTeam = () => {
-    setIsTeamDialogOpen(true);
-  };
-
   const handleProjectCreated = () => {
     setIsProjectDialogOpen(false);
     fetchData();
   };
-
-  const handleTeamCreated = () => {
-    setIsTeamDialogOpen(false);
-    fetchData();
-  };
-
-  const handleInviteResponse = () => {
-    fetchData();
-  };
-
-  const handleTeamLeft = () => {
-    fetchData();
-  };
-
-  // Combine personal and team projects
-  const allProjects = [...projects, ...teamProjects];
 
   return (
     <Layout>
@@ -148,63 +79,21 @@ const StudentDashboard = () => {
           description="Manage your projects and tasks"
           className="mb-6"
         >
-          {team && team.id && teamUserRole === 'leader' ? (
-            <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleNewProject}>
-                  <FolderPlus className="mr-2 h-4 w-4" />
-                  New Team Project
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl">
-                <ProjectForm 
-                  onSuccess={handleProjectCreated}
-                  onCancel={() => setIsProjectDialogOpen(false)}
-                  teamId={team.id}
-                />
-              </DialogContent>
-            </Dialog>
-          ) : team ? (
-            <Button disabled>
-              <Users className="mr-2 h-4 w-4" />
-              Team Member
-            </Button>
-          ) : (
-            <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleNewTeam}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Create Team
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <TeamForm 
-                  onSuccess={handleTeamCreated}
-                  onCancel={() => setIsTeamDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
+          <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleNewProject}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              <ProjectForm 
+                onSuccess={handleProjectCreated}
+                onCancel={() => setIsProjectDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </DashboardHeader>
-
-        {/* Pending Invites Section */}
-        {pendingInvites.length > 0 && (
-          <div className="mb-6">
-            <TeamInvites invites={pendingInvites} onResponse={handleInviteResponse} />
-          </div>
-        )}
-
-        {/* Team Info Section */}
-        {team && (
-          <div className="mb-6">
-            <TeamInfo 
-              team={team} 
-              members={teamMembers} 
-              userRole={teamUserRole}
-              onLeave={handleTeamLeft}
-            />
-          </div>
-        )}
 
         <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid grid-cols-3 md:grid-cols-4 lg:w-[400px]">
@@ -224,7 +113,7 @@ const StudentDashboard = () => {
                   <FolderPlus className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{allProjects.length}</div>
+                  <div className="text-2xl font-bold">{projects.length}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -247,7 +136,7 @@ const StudentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {allProjects.filter(p => p.status === 'approved').length}
+                    {projects.filter(p => p.status === 'approved').length}
                   </div>
                 </CardContent>
               </Card>
@@ -283,22 +172,19 @@ const StudentDashboard = () => {
                     <div className="flex justify-center py-8">
                       <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     </div>
-                  ) : allProjects.length === 0 ? (
+                  ) : projects.length === 0 ? (
                     <EmptyState
                       title="No projects yet"
-                      description={team ? "Your team doesn't have any projects yet" : "Create your first project to get started"}
+                      description="Create your first project to get started"
                       icon={FolderPlus}
-                      action={team && teamUserRole === 'leader' ? {
-                        label: "New Team Project",
+                      action={{
+                        label: "New Project",
                         onClick: handleNewProject,
-                      } : team ? undefined : {
-                        label: "Create Team",
-                        onClick: handleNewTeam,
                       }}
                     />
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {allProjects.slice(0, 4).map((project) => (
+                      {projects.slice(0, 4).map((project) => (
                         <ProjectCard key={project.id} project={project} />
                       ))}
                     </div>
@@ -374,22 +260,19 @@ const StudentDashboard = () => {
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   </div>
-                ) : allProjects.length === 0 ? (
+                ) : projects.length === 0 ? (
                   <EmptyState
                     title="No projects yet"
-                    description={team ? "Your team doesn't have any projects yet" : "Create your first project to get started on your academic journey"}
+                    description="Create your first project to get started on your academic journey"
                     icon={FolderPlus}
-                    action={team && teamUserRole === 'leader' ? {
-                      label: "Create Team Project",
+                    action={{
+                      label: "Create Project",
                       onClick: handleNewProject,
-                    } : team ? undefined : {
-                      label: "Create Team",
-                      onClick: handleNewTeam,
                     }}
                   />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {allProjects.map((project) => (
+                    {projects.map((project) => (
                       <ProjectCard key={project.id} project={project} />
                     ))}
                   </div>
