@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -33,7 +34,11 @@ const StudentDashboard = () => {
       
     if (error) {
       console.error("Error fetching projects:", error);
-      toast.error("Failed to fetch projects");
+      toast({
+        title: "Error",
+        description: "Failed to fetch projects",
+        variant: "destructive"
+      });
     } else {
       console.log("Projects fetched:", data);
       setProjects(data ?? []);

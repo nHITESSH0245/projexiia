@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -168,6 +169,22 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Add convenience methods for common toast types
+toast.error = (description: string, props: Omit<Toast, 'description' | 'variant'> = {}) => {
+  return toast({
+    variant: "destructive",
+    description,
+    ...props,
+  });
+};
+
+toast.success = (description: string, props: Omit<Toast, 'description' | 'variant'> = {}) => {
+  return toast({
+    description,
+    ...props,
+  });
+};
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -189,3 +206,4 @@ function useToast() {
 }
 
 export { useToast, toast }
+
