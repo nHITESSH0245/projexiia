@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,39 @@ import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
 import { FolderPlus, Calendar, BarChart3, List, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from "@/integrations/supabase/client";
+import { ProjectList } from '@/components/projects/ProjectList';
+import { NewProjectDialog } from '@/components/projects/NewProjectDialog';
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [showNewProject, setShowNewProject] = useState(false);
 
-  // Placeholder data - would be fetched from API in a real application
-  const mockProjects = [];
-  const mockActiveTasks = [];
-  
-  const handleNewProject = () => {
-    // Will be implemented in Phase 2
-    console.log('Create new project');
+  // Fetch projects for student
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("student_id", user?.id)
+      .order("created_at", { ascending: false });
+    if (!error) setProjects(data ?? []);
+    setLoadingProjects(false);
   };
+
+  useEffect(() => {
+    if (user?.id) fetchProjects();
+    // eslint-disable-next-line
+  }, [user?.id]);
+
+  const handleNewProject = () => setShowNewProject(true);
+
+  // Dummy summary card counts for now, but show real project count
+  const projectCount = projects.length;
+  const approvedCount = projects.filter((p: any) => p.status === "approved").length;
 
   return (
     <Layout>
@@ -46,7 +66,6 @@ const StudentDashboard = () => {
           
           <TabsContent value="overview" className="space-y-4 animate-fade-in">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Summary Cards */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -55,7 +74,7 @@ const StudentDashboard = () => {
                   <FolderPlus className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{projectCount}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -77,7 +96,7 @@ const StudentDashboard = () => {
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{approvedCount}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -100,7 +119,9 @@ const StudentDashboard = () => {
                   <CardDescription>Your most recently updated projects</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockProjects.length === 0 ? (
+                  {loadingProjects ? (
+                    <div>Loading...</div>
+                  ) : projects.length === 0 ? (
                     <EmptyState
                       title="No projects yet"
                       description="Create your first project to get started"
@@ -111,7 +132,7 @@ const StudentDashboard = () => {
                       }}
                     />
                   ) : (
-                    <div>Project list will appear here</div>
+                    <ProjectList projects={projects} userRole={role || "student"} />
                   )}
                 </CardContent>
               </Card>
@@ -121,15 +142,11 @@ const StudentDashboard = () => {
                   <CardDescription>Tasks due in the next 7 days</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockActiveTasks.length === 0 ? (
-                    <EmptyState
-                      title="No upcoming tasks"
-                      description="You're all caught up!"
-                      icon={Calendar}
-                    />
-                  ) : (
-                    <div>Task list will appear here</div>
-                  )}
+                  <EmptyState
+                    title="No upcoming tasks"
+                    description="You're all caught up!"
+                    icon={Calendar}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -142,7 +159,9 @@ const StudentDashboard = () => {
                 <CardDescription>Manage and track all your projects</CardDescription>
               </CardHeader>
               <CardContent>
-                {mockProjects.length === 0 ? (
+                {loadingProjects ? (
+                  <div>Loading...</div>
+                ) : projects.length === 0 ? (
                   <EmptyState
                     title="No projects yet"
                     description="Create your first project to get started on your academic journey"
@@ -153,7 +172,7 @@ const StudentDashboard = () => {
                     }}
                   />
                 ) : (
-                  <div>Project list will appear here</div>
+                  <ProjectList projects={projects} userRole={role || "student"} />
                 )}
               </CardContent>
             </Card>
@@ -191,6 +210,11 @@ const StudentDashboard = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        <NewProjectDialog
+          open={showNewProject}
+          onOpenChange={setShowNewProject}
+          onProjectCreated={fetchProjects}
+        />
       </div>
     </Layout>
   );

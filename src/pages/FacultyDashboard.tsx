@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,30 @@ import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, ClipboardCheck, Search, Calendar, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from "@/integrations/supabase/client";
+import { ProjectList } from '@/components/projects/ProjectList';
 
 const FacultyDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [allProjects, setAllProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
-  // Placeholder data - would be fetched from API in a real application
-  const mockStudentProjects = [];
-  const mockReviewRequests = [];
-  
-  const handleViewAllProjects = () => {
-    // Will be implemented in Phase 2
-    console.log('View all projects');
+  // Fetch all student projects for faculty
+  const fetchAllProjects = async () => {
+    setLoadingProjects(true);
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error) setAllProjects(data ?? []);
+    setLoadingProjects(false);
   };
+
+  useEffect(() => {
+    fetchAllProjects();
+    // eslint-disable-next-line
+  }, []);
 
   return (
     <Layout>
@@ -30,7 +41,7 @@ const FacultyDashboard = () => {
           description="Monitor student projects and provide feedback"
           className="mb-6"
         >
-          <Button onClick={handleViewAllProjects}>
+          <Button onClick={fetchAllProjects}>
             <Search className="mr-2 h-4 w-4" />
             View All Projects
           </Button>
@@ -46,7 +57,6 @@ const FacultyDashboard = () => {
           
           <TabsContent value="overview" className="space-y-4 animate-fade-in">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Summary Cards */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -55,7 +65,7 @@ const FacultyDashboard = () => {
                   <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">0</div>
+                  <div className="text-2xl font-bold">{allProjects.length}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -100,14 +110,16 @@ const FacultyDashboard = () => {
                   <CardDescription>Recently updated student projects</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockStudentProjects.length === 0 ? (
+                  {loadingProjects ? (
+                    <div>Loading...</div>
+                  ) : allProjects.length === 0 ? (
                     <EmptyState
                       title="No projects yet"
                       description="Student projects will appear here once created"
                       icon={ClipboardCheck}
                     />
                   ) : (
-                    <div>Project list will appear here</div>
+                    <ProjectList projects={allProjects} userRole="faculty" />
                   )}
                 </CardContent>
               </Card>
@@ -117,15 +129,11 @@ const FacultyDashboard = () => {
                   <CardDescription>Projects waiting for your feedback</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {mockReviewRequests.length === 0 ? (
-                    <EmptyState
-                      title="No pending reviews"
-                      description="You're all caught up!"
-                      icon={Search}
-                    />
-                  ) : (
-                    <div>Reviews list will appear here</div>
-                  )}
+                  <EmptyState
+                    title="No pending reviews"
+                    description="You're all caught up!"
+                    icon={Search}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -138,14 +146,16 @@ const FacultyDashboard = () => {
                 <CardDescription>View and monitor all student projects</CardDescription>
               </CardHeader>
               <CardContent>
-                {mockStudentProjects.length === 0 ? (
+                {loadingProjects ? (
+                  <div>Loading...</div>
+                ) : allProjects.length === 0 ? (
                   <EmptyState
                     title="No projects yet"
                     description="Student projects will appear here once created"
                     icon={ClipboardCheck}
                   />
                 ) : (
-                  <div>Project list will appear here</div>
+                  <ProjectList projects={allProjects} userRole="faculty" />
                 )}
               </CardContent>
             </Card>
