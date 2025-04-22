@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
 import { FolderPlus, Calendar, BarChart3, List, Clock } from 'lucide-react';
@@ -21,19 +20,29 @@ const StudentDashboard = () => {
 
   // Fetch projects for student
   const fetchProjects = async () => {
+    if (!user?.id) return;
+    
     setLoadingProjects(true);
+    console.log("Fetching projects for user ID:", user.id);
+    
     const { data, error } = await supabase
       .from("projects")
       .select("*")
-      .eq("student_id", user?.id)
+      .eq("student_id", user.id)
       .order("created_at", { ascending: false });
-    if (!error) setProjects(data ?? []);
+      
+    if (error) {
+      console.error("Error fetching projects:", error);
+    } else {
+      console.log("Projects fetched:", data);
+      setProjects(data ?? []);
+    }
+    
     setLoadingProjects(false);
   };
 
   useEffect(() => {
     if (user?.id) fetchProjects();
-    // eslint-disable-next-line
   }, [user?.id]);
 
   const handleNewProject = () => setShowNewProject(true);

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -20,17 +19,25 @@ const FacultyDashboard = () => {
   // Fetch all student projects for faculty
   const fetchAllProjects = async () => {
     setLoadingProjects(true);
+    console.log("Faculty fetching all projects");
+    
     const { data, error } = await supabase
       .from("projects")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error) setAllProjects(data ?? []);
+      
+    if (error) {
+      console.error("Error fetching projects for faculty:", error);
+    } else {
+      console.log("Projects fetched for faculty:", data);
+      setAllProjects(data ?? []);
+    }
+    
     setLoadingProjects(false);
   };
 
   useEffect(() => {
     fetchAllProjects();
-    // eslint-disable-next-line
   }, []);
 
   return (
