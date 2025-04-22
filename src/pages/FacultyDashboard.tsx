@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -9,6 +10,7 @@ import { Users, ClipboardCheck, Search, Calendar, BarChart3 } from 'lucide-react
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectList } from '@/components/projects/ProjectList';
+import { toast } from '@/hooks/use-toast';
 
 const FacultyDashboard = () => {
   const { user } = useAuth();
@@ -21,19 +23,24 @@ const FacultyDashboard = () => {
     setLoadingProjects(true);
     console.log("Faculty fetching all projects");
     
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("created_at", { ascending: false });
-      
-    if (error) {
-      console.error("Error fetching projects for faculty:", error);
-    } else {
-      console.log("Projects fetched for faculty:", data);
-      setAllProjects(data ?? []);
+    try {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+        
+      if (error) {
+        console.error("Error fetching projects for faculty:", error);
+        toast({ title: "Error", description: "Failed to load projects", variant: "destructive" });
+      } else {
+        console.log("Projects fetched for faculty:", data);
+        setAllProjects(data || []);
+      }
+    } catch (err) {
+      console.error("Exception fetching projects:", err);
+    } finally {
+      setLoadingProjects(false);
     }
-    
-    setLoadingProjects(false);
   };
 
   useEffect(() => {
@@ -50,7 +57,7 @@ const FacultyDashboard = () => {
         >
           <Button onClick={fetchAllProjects}>
             <Search className="mr-2 h-4 w-4" />
-            View All Projects
+            Refresh Projects
           </Button>
         </DashboardHeader>
 

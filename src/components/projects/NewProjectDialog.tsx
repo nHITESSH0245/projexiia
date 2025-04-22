@@ -31,6 +31,8 @@ export function NewProjectDialog({ open, onOpenChange, onProjectCreated }: NewPr
     }
     
     setIsLoading(true);
+    console.log("Creating project with student_id:", user.id);
+    
     const { data, error } = await supabase.from("projects").insert({
       title,
       description,
@@ -41,12 +43,15 @@ export function NewProjectDialog({ open, onOpenChange, onProjectCreated }: NewPr
     setIsLoading(false);
     
     if (error) {
+      console.error("Project creation error:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      console.log("Project created successfully");
       toast({ title: "Project created!", description: "Your project has been created successfully", variant: "default" });
       setTitle("");
       setDescription("");
       onOpenChange(false);
+      // Ensure we call onProjectCreated to refresh the project list
       onProjectCreated();
     }
   };

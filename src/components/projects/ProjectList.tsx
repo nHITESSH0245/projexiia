@@ -27,6 +27,8 @@ export function ProjectList({ projects, userRole }: ProjectListProps) {
     );
   }
 
+  console.log("Rendering ProjectList with projects:", projects);
+
   return (
     <div>
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">

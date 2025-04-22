@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectList } from '@/components/projects/ProjectList';
 import { NewProjectDialog } from '@/components/projects/NewProjectDialog';
+import { toast } from '@/hooks/use-toast';
 
 const StudentDashboard = () => {
   const { user, role } = useAuth();
@@ -18,7 +19,6 @@ const StudentDashboard = () => {
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [showNewProject, setShowNewProject] = useState(false);
 
-  // Fetch projects for student
   const fetchProjects = async () => {
     if (!user?.id) return;
     
@@ -33,6 +33,7 @@ const StudentDashboard = () => {
       
     if (error) {
       console.error("Error fetching projects:", error);
+      toast.error("Failed to fetch projects");
     } else {
       console.log("Projects fetched:", data);
       setProjects(data ?? []);
@@ -47,7 +48,6 @@ const StudentDashboard = () => {
 
   const handleNewProject = () => setShowNewProject(true);
 
-  // Dummy summary card counts for now, but show real project count
   const projectCount = projects.length;
   const approvedCount = projects.filter((p: any) => p.status === "approved").length;
 
